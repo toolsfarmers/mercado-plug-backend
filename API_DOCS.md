@@ -1,6 +1,6 @@
 # Mercado Plug — Documentación Técnica de Integración
 
-**Versión:** 0.1.0  
+**Versión:** 0.2.0  
 **Base URL (producción):** `https://mercado-plug-api.onrender.com`  
 **Base URL (local):** `http://localhost:8000`  
 **Prefijo de todos los endpoints:** `/api/v1`  
@@ -22,12 +22,19 @@
    - [Obtener usuario por ID](#63-obtener-usuario-por-id)
    - [Actualizar usuario](#64-actualizar-usuario)
    - [Eliminar usuario](#65-eliminar-usuario)
-7. [Modelos de Datos](#7-modelos-de-datos)
-8. [Enumeraciones](#8-enumeraciones)
-9. [Paginación](#9-paginación)
-10. [Ejemplos de Integración](#10-ejemplos-de-integración)
-11. [Variables de Entorno](#11-variables-de-entorno)
-12. [Despliegue en Render](#12-despliegue-en-render)
+7. [Módulo de Tiendas](#7-módulo-de-tiendas)
+   - [Crear tienda](#71-crear-tienda)
+   - [Listar tiendas](#72-listar-tiendas)
+   - [Obtener tienda por ID](#73-obtener-tienda-por-id)
+   - [Obtener tienda por slug](#74-obtener-tienda-por-slug)
+   - [Actualizar tienda](#75-actualizar-tienda)
+   - [Eliminar tienda](#76-eliminar-tienda)
+8. [Modelos de Datos](#8-modelos-de-datos)
+9. [Enumeraciones](#9-enumeraciones)
+10. [Paginación](#10-paginación)
+11. [Ejemplos de Integración](#11-ejemplos-de-integración)
+12. [Variables de Entorno](#12-variables-de-entorno)
+13. [Despliegue en Render](#13-despliegue-en-render)
 
 ---
 
@@ -360,7 +367,287 @@ _Sin cuerpo de respuesta._
 
 ---
 
-## 7. Modelos de Datos
+---
+
+## 7. Módulo de Tiendas
+
+Gestiona las tiendas del marketplace. Solo usuarios con rol `seller` o `admin` pueden crear tiendas.
+
+### 7.1 Crear tienda
+
+```
+POST /api/v1/stores/
+```
+
+#### Reglas de negocio
+
+- El `seller_id` debe corresponder a un usuario existente con rol `seller` o `admin`.
+- El `slug` se genera automáticamente a partir del `store_name` si no se proporciona (normaliza tildes, espacios y caracteres especiales).
+- El `slug` debe ser único en toda la plataforma.
+
+#### Body (JSON)
+
+| Campo              | Tipo      | Requerido | Descripción                                                     |
+|--------------------|-----------|-----------|------------------------------------------------------------------|
+| `seller_id`        | `int`     | Sí        | ID del usuario vendedor dueño de la tienda                      |
+| `store_name`       | `string`  | Sí        | Nombre comercial de la tienda                                   |
+| `slug`             | `string`  | No        | URL amigable única (ej: `mi-tienda`). Se genera automáticamente si se omite. Solo minúsculas, números y guiones. |
+| `description`      | `string`  | No        | Descripción de la tienda                                        |
+| `logo_url`         | `string`  | No        | URL del logo                                                    |
+| `cover_image_url`  | `string`  | No        | URL de la imagen de portada                                     |
+| `whatsapp_number`  | `string`  | No        | Número de WhatsApp de contacto                                  |
+| `location_id`      | `int`     | No        | ID de ubicación (módulo de ubicaciones, próximamente)           |
+
+#### Ejemplo de petición
+
+```bash
+curl -X POST "https://mercado-plug-api.onrender.com/api/v1/stores/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "seller_id": 2,
+    "store_name": "Electrónica Rápida",
+    "description": "Los mejores gadgets al mejor precio",
+    "whatsapp_number": "+502 5555-9999"
+  }'
+```
+
+#### Respuesta exitosa `201 Created`
+
+```json
+{
+  "id": 1,
+  "seller_id": 2,
+  "store_name": "Electrónica Rápida",
+  "slug": "electronica-rapida",
+  "description": "Los mejores gadgets al mejor precio",
+  "logo_url": null,
+  "cover_image_url": null,
+  "whatsapp_number": "+502 5555-9999",
+  "location_id": null,
+  "status": "active",
+  "created_at": "2026-05-08T18:00:00Z"
+}
+```
+
+#### Errores posibles
+
+| Código | Condición                                                   |
+|--------|--------------------------------------------------------------|
+| `400`  | El slug ya está en uso                                       |
+| `400`  | El usuario no tiene rol `seller` o `admin`                   |
+| `404`  | El `seller_id` no corresponde a ningún usuario               |
+| `422`  | Campos requeridos faltantes o formato de slug inválido       |
+
+---
+
+### 7.2 Listar tiendas
+
+```
+GET /api/v1/stores/
+```
+
+#### Query Parameters
+
+| Parámetro   | Tipo  | Defecto | Descripción                                  |
+|-------------|-------|---------|----------------------------------------------|
+| `skip`      | `int` | `0`     | Offset de paginación                         |
+| `limit`     | `int` | `20`    | Máximo de resultados (máx. `100`)            |
+| `seller_id` | `int` | —       | Filtrar tiendas de un vendedor específico     |
+
+#### Ejemplo de petición
+
+```bash
+# Todas las tiendas
+curl "https://mercado-plug-api.onrender.com/api/v1/stores/"
+
+# Tiendas de un vendedor específico
+curl "https://mercado-plug-api.onrender.com/api/v1/stores/?seller_id=2"
+```
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "total": 3,
+  "stores": [
+    {
+      "id": 1,
+      "seller_id": 2,
+      "store_name": "Electrónica Rápida",
+      "slug": "electronica-rapida",
+      "description": "Los mejores gadgets al mejor precio",
+      "logo_url": null,
+      "cover_image_url": null,
+      "whatsapp_number": "+502 5555-9999",
+      "location_id": null,
+      "status": "active",
+      "created_at": "2026-05-08T18:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 7.3 Obtener tienda por ID
+
+```
+GET /api/v1/stores/{store_id}
+```
+
+#### Path Parameters
+
+| Parámetro  | Tipo  | Descripción           |
+|------------|-------|-----------------------|
+| `store_id` | `int` | ID único de la tienda |
+
+#### Ejemplo de petición
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/stores/1"
+```
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "id": 1,
+  "seller_id": 2,
+  "store_name": "Electrónica Rápida",
+  "slug": "electronica-rapida",
+  "description": "Los mejores gadgets al mejor precio",
+  "logo_url": null,
+  "cover_image_url": null,
+  "whatsapp_number": "+502 5555-9999",
+  "location_id": null,
+  "status": "active",
+  "created_at": "2026-05-08T18:00:00Z"
+}
+```
+
+#### Errores posibles
+
+| Código | Condición                  |
+|--------|----------------------------|
+| `404`  | La tienda no existe        |
+
+---
+
+### 7.4 Obtener tienda por slug
+
+Ideal para construir URLs públicas del marketplace (ej: `mercadoplug.com/tienda/electronica-rapida`).
+
+```
+GET /api/v1/stores/slug/{slug}
+```
+
+#### Path Parameters
+
+| Parámetro | Tipo     | Descripción                       |
+|-----------|----------|-----------------------------------|
+| `slug`    | `string` | Slug único de la tienda           |
+
+#### Ejemplo de petición
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/stores/slug/electronica-rapida"
+```
+
+#### Respuesta exitosa `200 OK`
+
+_Mismo formato que [Obtener tienda por ID](#73-obtener-tienda-por-id)._
+
+#### Errores posibles
+
+| Código | Condición                  |
+|--------|----------------------------|
+| `404`  | La tienda no existe        |
+
+---
+
+### 7.5 Actualizar tienda
+
+Actualiza parcialmente los campos de una tienda. Solo se modifican los campos enviados.
+
+```
+PATCH /api/v1/stores/{store_id}
+```
+
+#### Path Parameters
+
+| Parámetro  | Tipo  | Descripción           |
+|------------|-------|-----------------------|
+| `store_id` | `int` | ID único de la tienda |
+
+#### Body (JSON) — todos los campos son opcionales
+
+| Campo              | Tipo     | Descripción                                        |
+|--------------------|----------|----------------------------------------------------|
+| `store_name`       | `string` | Nuevo nombre de la tienda                          |
+| `slug`             | `string` | Nuevo slug (debe ser único)                        |
+| `description`      | `string` | Nueva descripción                                  |
+| `logo_url`         | `string` | Nueva URL del logo                                 |
+| `cover_image_url`  | `string` | Nueva URL de imagen de portada                     |
+| `whatsapp_number`  | `string` | Nuevo número de WhatsApp                           |
+| `location_id`      | `int`    | Nuevo ID de ubicación                              |
+| `status`           | `string` | Nuevo estado: `active`, `inactive` o `suspended`   |
+
+#### Ejemplo de petición
+
+```bash
+curl -X PATCH "https://mercado-plug-api.onrender.com/api/v1/stores/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "logo_url": "https://cdn.mercadoplug.com/logos/electronica-rapida.png",
+    "status": "active"
+  }'
+```
+
+#### Respuesta exitosa `200 OK`
+
+_Mismo formato que [Obtener tienda por ID](#73-obtener-tienda-por-id) con los campos actualizados._
+
+#### Errores posibles
+
+| Código | Condición                          |
+|--------|------------------------------------|
+| `400`  | El nuevo slug ya está en uso       |
+| `404`  | La tienda no existe                |
+| `422`  | Valor inválido en algún campo      |
+
+---
+
+### 7.6 Eliminar tienda
+
+```
+DELETE /api/v1/stores/{store_id}
+```
+
+#### Path Parameters
+
+| Parámetro  | Tipo  | Descripción           |
+|------------|-------|-----------------------|
+| `store_id` | `int` | ID único de la tienda |
+
+#### Ejemplo de petición
+
+```bash
+curl -X DELETE "https://mercado-plug-api.onrender.com/api/v1/stores/1"
+```
+
+#### Respuesta exitosa `204 No Content`
+
+_Sin cuerpo de respuesta._
+
+#### Errores posibles
+
+| Código | Condición                  |
+|--------|----------------------------|
+| `404`  | La tienda no existe        |
+
+---
+
+## 8. Modelos de Datos
 
 ### Usuario (`User`)
 
@@ -378,9 +665,27 @@ _Sin cuerpo de respuesta._
 
 > **Nota:** El campo `password_hash` nunca es retornado por la API.
 
+### Tienda (`Store`)
+
+```json
+{
+  "id": 1,
+  "seller_id": 2,
+  "store_name": "string",
+  "slug": "string",
+  "description": "string | null",
+  "logo_url": "string | null",
+  "cover_image_url": "string | null",
+  "whatsapp_number": "string | null",
+  "location_id": "int | null",
+  "status": "active | inactive | suspended",
+  "created_at": "2026-05-08T18:00:00Z"
+}
+```
+
 ---
 
-## 8. Enumeraciones
+## 9. Enumeraciones
 
 ### `role` — Rol del usuario
 
@@ -390,7 +695,7 @@ _Sin cuerpo de respuesta._
 | `seller` | Vendedor. Puede publicar y gestionar productos.          |
 | `admin`  | Administrador. Acceso total a la plataforma.             |
 
-### `status` — Estado del usuario
+### `status` (Usuario) — Estado del usuario
 
 | Valor      | Descripción                                           |
 |------------|-------------------------------------------------------|
@@ -398,9 +703,17 @@ _Sin cuerpo de respuesta._
 | `inactive` | Cuenta desactivada temporalmente.                     |
 | `banned`   | Cuenta suspendida por violación de políticas.         |
 
+### `status` (Tienda) — Estado de la tienda
+
+| Valor       | Descripción                                           |
+|-------------|-------------------------------------------------------|
+| `active`    | Tienda activa y visible en el marketplace. (defecto)  |
+| `inactive`  | Tienda desactivada temporalmente por el vendedor.     |
+| `suspended` | Tienda suspendida por el administrador.               |
+
 ---
 
-## 9. Paginación
+## 10. Paginación
 
 El endpoint de listado soporta paginación por offset:
 
@@ -423,7 +736,7 @@ total_paginas = ceil(total / limit)
 
 ---
 
-## 10. Ejemplos de Integración
+## 11. Ejemplos de Integración
 
 ### JavaScript / Fetch
 
@@ -436,11 +749,26 @@ const response = await fetch('https://mercado-plug-api.onrender.com/api/v1/users
     name: 'Ana García',
     email: 'ana@example.com',
     password: 'MiPassword123',
-    role: 'buyer'
+    role: 'seller'
   })
 });
 const user = await response.json();
-console.log(user);
+
+// Crear una tienda para ese usuario
+const storeRes = await fetch('https://mercado-plug-api.onrender.com/api/v1/stores/', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    seller_id: user.id,
+    store_name: 'Electrónica Rápida',
+    description: 'Los mejores gadgets',
+    whatsapp_number: '+502 5555-9999'
+  })
+});
+const store = await storeRes.json();
+
+// Obtener tienda por slug
+const bySlug = await fetch(`https://mercado-plug-api.onrender.com/api/v1/stores/slug/${store.slug}`);
 
 // Obtener usuario por ID
 const res = await fetch('https://mercado-plug-api.onrender.com/api/v1/users/1');
@@ -467,8 +795,18 @@ user = response.json()
 # Listar usuarios
 users = requests.get(f"{BASE_URL}/users/", params={"skip": 0, "limit": 20}).json()
 
-# Actualizar usuario
-updated = requests.patch(f"{BASE_URL}/users/1", json={"status": "inactive"}).json()
+# Crear tienda
+store = requests.post(f"{BASE_URL}/stores/", json={
+    "seller_id": user["id"],
+    "store_name": "Electrónica Rápida",
+    "description": "Los mejores gadgets",
+}).json()
+
+# Obtener tienda por slug
+store_by_slug = requests.get(f"{BASE_URL}/stores/slug/{store['slug']}").json()
+
+# Actualizar tienda
+requests.patch(f"{BASE_URL}/stores/{store['id']}", json={"status": "inactive"})
 
 # Eliminar usuario
 requests.delete(f"{BASE_URL}/users/1")
@@ -506,7 +844,7 @@ Future<Map<String, dynamic>> getUser(int id) async {
 
 ---
 
-## 11. Variables de Entorno
+## 12. Variables de Entorno
 
 El proyecto requiere las siguientes variables de entorno. Se deben definir en un archivo `.env` en la raíz del proyecto (no incluido en el repositorio):
 
@@ -523,7 +861,7 @@ cp .env.example .env
 
 ---
 
-## 12. Despliegue en Render
+## 13. Despliegue en Render
 
 El proyecto incluye `render.yaml` para despliegue automático.
 
@@ -562,4 +900,4 @@ backend/
 
 ---
 
-*Documentación generada para Mercado Plug API v0.1.0 — Mayo 2026*
+*Documentación generada para Mercado Plug API v0.2.0 — Mayo 2026*
