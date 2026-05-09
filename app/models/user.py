@@ -1,7 +1,7 @@
 import enum
-from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Enum, Integer, String
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -29,8 +29,13 @@ class User(Base):
     phone = Column(String(30), nullable=True)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.buyer)
     status = Column(Enum(UserStatus), nullable=False, default=UserStatus.active)
+    location_id = Column(
+        Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True
+    )
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
     )
+
+    location = relationship("Location", backref="users")

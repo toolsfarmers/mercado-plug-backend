@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.location import Location
 from app.models.store import Store
 from app.models.user import User, UserRole
 from app.schemas.store import StoreCreate, StoreListResponse, StoreResponse, StoreUpdate
@@ -42,6 +43,10 @@ def create_store(payload: StoreCreate, db: Session = Depends(get_db)):
             detail=f"El slug '{slug}' ya está en uso. Elige otro nombre o proporciona un slug personalizado.",
         )
 
+    location = Location()
+    db.add(location)
+    db.flush()
+
     store = Store(
         seller_id=payload.seller_id,
         store_name=payload.store_name,
@@ -50,7 +55,7 @@ def create_store(payload: StoreCreate, db: Session = Depends(get_db)):
         logo_url=payload.logo_url,
         cover_image_url=payload.cover_image_url,
         whatsapp_number=payload.whatsapp_number,
-        location_id=payload.location_id,
+        location_id=location.id,
     )
     db.add(store)
     db.commit()

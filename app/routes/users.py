@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.security import hash_password
 from app.database import get_db
+from app.models.location import Location
 from app.models.user import User
 from app.schemas.user import UserCreate, UserListResponse, UserResponse, UserUpdate
-from app.core.security import hash_password
 
 router = APIRouter()
 
@@ -18,12 +19,17 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
             detail="Ya existe un usuario con ese correo electrónico",
         )
 
+    location = Location()
+    db.add(location)
+    db.flush()
+
     user = User(
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),
         phone=payload.phone,
         role=payload.role,
+        location_id=location.id,
     )
     db.add(user)
     db.commit()

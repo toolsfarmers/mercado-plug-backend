@@ -141,19 +141,21 @@ Cuando algún campo no cumple las reglas de validación, la respuesta incluye el
 
 Registra un nuevo usuario en la plataforma.
 
+> **Auto-ubicación:** Al crear un usuario se genera automáticamente un registro vacío en la tabla `locations` y se vincula al usuario mediante `location_id`. El usuario solo necesita actualizar esa ubicación vía `PATCH /api/v1/locations/{location_id}`.
+
 ```
 POST /api/v1/users/
 ```
 
 #### Body (JSON)
 
-| Campo    | Tipo     | Requerido | Descripción                                  |
-|----------|----------|-----------|----------------------------------------------|
-| `name`   | `string` | Sí        | Nombre completo del usuario                  |
-| `email`  | `string` | Sí        | Correo electrónico único (formato válido)    |
-| `password` | `string` | Sí      | Contraseña en texto plano (mínimo 8 caracteres). Se almacena hasheada con bcrypt. |
-| `phone`  | `string` | No        | Número de teléfono                           |
-| `role`   | `string` | No        | `buyer` (defecto), `seller` o `admin`        |
+| Campo      | Tipo     | Requerido | Descripción                                                        |
+|------------|----------|-----------|--------------------------------------------------------------------|
+| `name`     | `string` | Sí        | Nombre completo del usuario                                        |
+| `email`    | `string` | Sí        | Correo electrónico único (formato válido)                          |
+| `password` | `string` | Sí        | Contraseña en texto plano (mínimo 8 caracteres). Se almacena hasheada con bcrypt. |
+| `phone`    | `string` | No        | Número de teléfono                                                 |
+| `role`     | `string` | No        | `buyer` (defecto), `seller` o `admin`                              |
 
 #### Ejemplo de petición
 
@@ -179,15 +181,18 @@ curl -X POST "https://mercado-plug-api.onrender.com/api/v1/users/" \
   "phone": "+502 5555-1234",
   "role": "seller",
   "status": "active",
+  "location_id": 3,
   "created_at": "2026-05-08T18:00:00Z"
 }
 ```
 
+> El campo `location_id` apunta a un registro en `/api/v1/locations/{location_id}` que inicialmente está vacío (solo `country: "República Dominicana"`). El usuario puede completarlo con un `PATCH`.
+
 #### Errores posibles
 
-| Código | Condición                                  |
-|--------|--------------------------------------------|
-| `400`  | El correo ya está registrado               |
+| Código | Condición                                                              |
+|--------|------------------------------------------------------------------------|
+| `400`  | El correo ya está registrado                                           |
 | `422`  | Formato de email inválido, contraseña < 8 caracteres, o campos faltantes |
 
 ---
@@ -393,16 +398,17 @@ POST /api/v1/stores/
 
 #### Body (JSON)
 
-| Campo              | Tipo      | Requerido | Descripción                                                     |
-|--------------------|-----------|-----------|------------------------------------------------------------------|
-| `seller_id`        | `int`     | Sí        | ID del usuario vendedor dueño de la tienda                      |
-| `store_name`       | `string`  | Sí        | Nombre comercial de la tienda                                   |
-| `slug`             | `string`  | No        | URL amigable única (ej: `mi-tienda`). Se genera automáticamente si se omite. Solo minúsculas, números y guiones. |
-| `description`      | `string`  | No        | Descripción de la tienda                                        |
-| `logo_url`         | `string`  | No        | URL del logo                                                    |
-| `cover_image_url`  | `string`  | No        | URL de la imagen de portada                                     |
-| `whatsapp_number`  | `string`  | No        | Número de WhatsApp de contacto                                  |
-| `location_id`      | `int`     | No        | ID de ubicación (módulo de ubicaciones, próximamente)           |
+| Campo             | Tipo     | Requerido | Descripción                                                                         |
+|-------------------|----------|-----------|-------------------------------------------------------------------------------------|
+| `seller_id`       | `int`    | Sí        | ID del usuario vendedor dueño de la tienda                                          |
+| `store_name`      | `string` | Sí        | Nombre comercial de la tienda                                                       |
+| `slug`            | `string` | No        | URL amigable única (ej: `mi-tienda`). Se genera automáticamente si se omite. Solo minúsculas, números y guiones. |
+| `description`     | `string` | No        | Descripción de la tienda                                                            |
+| `logo_url`        | `string` | No        | URL del logo                                                                        |
+| `cover_image_url` | `string` | No        | URL de la imagen de portada                                                         |
+| `whatsapp_number` | `string` | No        | Número de WhatsApp de contacto                                                      |
+
+> **Auto-ubicación:** Al crear una tienda se genera automáticamente un registro vacío en `locations` vinculado a la tienda. Para completar la dirección usa `PATCH /api/v1/locations/{location_id}`.
 
 #### Ejemplo de petición
 
@@ -429,11 +435,13 @@ curl -X POST "https://mercado-plug-api.onrender.com/api/v1/stores/" \
   "logo_url": null,
   "cover_image_url": null,
   "whatsapp_number": "+502 5555-9999",
-  "location_id": null,
+  "location_id": 7,
   "status": "active",
   "created_at": "2026-05-08T18:00:00Z"
 }
 ```
+
+> El `location_id` devuelto apunta a un registro en `locations` inicialmente vacío (solo `country: "República Dominicana"`). Puede completarse con un `PATCH` a `/api/v1/locations/7`.
 
 #### Errores posibles
 
@@ -882,11 +890,12 @@ _Sin cuerpo de respuesta._
   "phone": "string | null",
   "role": "buyer | seller | admin",
   "status": "active | inactive | banned",
+  "location_id": 3,
   "created_at": "2026-05-08T18:00:00Z"
 }
 ```
 
-> **Nota:** El campo `password_hash` nunca es retornado por la API.
+> **Nota:** El campo `password_hash` nunca es retornado por la API. El `location_id` siempre está presente (se crea automáticamente al registrar el usuario).
 
 ### Tienda (`Store`)
 
@@ -1138,4 +1147,4 @@ backend/
 
 ---
 
-*Documentación generada para Mercado Plug API v0.3.0 — Mayo 2026*
+*Documentación generada para Mercado Plug API v0.4.0 — Mayo 2026*

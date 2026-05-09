@@ -35,6 +35,7 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     role: UserRole
     status: UserStatus
+    location_id: Optional[int] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

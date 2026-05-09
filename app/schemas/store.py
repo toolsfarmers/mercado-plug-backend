@@ -29,7 +29,6 @@ class StoreCreate(BaseModel):
     logo_url: Optional[str] = None
     cover_image_url: Optional[str] = None
     whatsapp_number: Optional[str] = None
-    location_id: Optional[int] = None
 
     @field_validator("store_name")
     @classmethod
@@ -62,7 +61,6 @@ class StoreUpdate(BaseModel):
     logo_url: Optional[str] = None
     cover_image_url: Optional[str] = None
     whatsapp_number: Optional[str] = None
-    location_id: Optional[int] = None
     status: Optional[StoreStatus] = None
 
     @field_validator("slug")
