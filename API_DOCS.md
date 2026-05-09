@@ -1,6 +1,6 @@
 # Mercado Plug — Documentación Técnica de Integración
 
-**Versión:** 0.2.0  
+**Versión:** 0.3.0  
 **Base URL (producción):** `https://mercado-plug-api.onrender.com`  
 **Base URL (local):** `http://localhost:8000`  
 **Prefijo de todos los endpoints:** `/api/v1`  
@@ -29,12 +29,18 @@
    - [Obtener tienda por slug](#74-obtener-tienda-por-slug)
    - [Actualizar tienda](#75-actualizar-tienda)
    - [Eliminar tienda](#76-eliminar-tienda)
-8. [Modelos de Datos](#8-modelos-de-datos)
-9. [Enumeraciones](#9-enumeraciones)
-10. [Paginación](#10-paginación)
-11. [Ejemplos de Integración](#11-ejemplos-de-integración)
-12. [Variables de Entorno](#12-variables-de-entorno)
-13. [Despliegue en Render](#13-despliegue-en-render)
+8. [Módulo de Ubicaciones](#8-módulo-de-ubicaciones)
+   - [Crear ubicación](#81-crear-ubicación)
+   - [Listar ubicaciones](#82-listar-ubicaciones)
+   - [Obtener ubicación por ID](#83-obtener-ubicación-por-id)
+   - [Actualizar ubicación](#84-actualizar-ubicación)
+   - [Eliminar ubicación](#85-eliminar-ubicación)
+9. [Modelos de Datos](#9-modelos-de-datos)
+10. [Enumeraciones](#10-enumeraciones)
+11. [Paginación](#11-paginación)
+12. [Ejemplos de Integración](#12-ejemplos-de-integración)
+13. [Variables de Entorno](#13-variables-de-entorno)
+14. [Despliegue en Render](#14-despliegue-en-render)
 
 ---
 
@@ -647,7 +653,224 @@ _Sin cuerpo de respuesta._
 
 ---
 
-## 8. Modelos de Datos
+## 8. Módulo de Ubicaciones
+
+Gestiona las ubicaciones geográficas. Una ubicación puede asociarse a una tienda mediante el campo `location_id`.
+
+### 8.1 Crear ubicación
+
+```
+POST /api/v1/locations/
+```
+
+#### Body (JSON)
+
+| Campo                | Tipo     | Requerido | Descripción                                                    |
+|----------------------|----------|-----------|----------------------------------------------------------------|
+| `province`           | `string` | Sí        | Provincia                                                      |
+| `country`            | `string` | No        | País (defecto: `"República Dominicana"`)                       |
+| `municipality`       | `string` | No        | Municipio                                                      |
+| `sector`             | `string` | No        | Sector o barrio                                                |
+| `address_line`       | `string` | No        | Dirección exacta (calle, número, edificio, etc.)               |
+| `reference_point`    | `string` | No        | Punto de referencia para llegar (ej: "frente al parque central") |
+| `additional_details` | `string` | No        | Detalles adicionales de la ubicación                           |
+
+#### Ejemplo de petición
+
+```bash
+curl -X POST "https://mercado-plug-api.onrender.com/api/v1/locations/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "province": "Santo Domingo",
+    "municipality": "Santo Domingo Este",
+    "sector": "Los Mameyes",
+    "address_line": "Calle 5, Casa #12",
+    "reference_point": "Frente a la farmacia Carol"
+  }'
+```
+
+#### Respuesta exitosa `201 Created`
+
+```json
+{
+  "id": 1,
+  "country": "República Dominicana",
+  "province": "Santo Domingo",
+  "municipality": "Santo Domingo Este",
+  "sector": "Los Mameyes",
+  "address_line": "Calle 5, Casa #12",
+  "reference_point": "Frente a la farmacia Carol",
+  "additional_details": null
+}
+```
+
+#### Errores posibles
+
+| Código | Condición                             |
+|--------|---------------------------------------|
+| `422`  | `province` vacío o faltante           |
+
+---
+
+### 8.2 Listar ubicaciones
+
+```
+GET /api/v1/locations/
+```
+
+#### Query Parameters
+
+| Parámetro      | Tipo     | Defecto | Descripción                                    |
+|----------------|----------|---------|------------------------------------------------|
+| `skip`         | `int`    | `0`     | Offset de paginación                           |
+| `limit`        | `int`    | `20`    | Máximo de resultados (máx. `100`)              |
+| `province`     | `string` | —       | Filtrar por provincia (búsqueda parcial)        |
+| `municipality` | `string` | —       | Filtrar por municipio (búsqueda parcial)        |
+
+#### Ejemplo de petición
+
+```bash
+# Todas las ubicaciones
+curl "https://mercado-plug-api.onrender.com/api/v1/locations/"
+
+# Filtrar por provincia
+curl "https://mercado-plug-api.onrender.com/api/v1/locations/?province=Santiago"
+```
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "total": 10,
+  "locations": [
+    {
+      "id": 1,
+      "country": "República Dominicana",
+      "province": "Santo Domingo",
+      "municipality": "Santo Domingo Este",
+      "sector": "Los Mameyes",
+      "address_line": "Calle 5, Casa #12",
+      "reference_point": "Frente a la farmacia Carol",
+      "additional_details": null
+    }
+  ]
+}
+```
+
+---
+
+### 8.3 Obtener ubicación por ID
+
+```
+GET /api/v1/locations/{location_id}
+```
+
+#### Path Parameters
+
+| Parámetro     | Tipo  | Descripción               |
+|---------------|-------|---------------------------|
+| `location_id` | `int` | ID único de la ubicación  |
+
+#### Ejemplo de petición
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/locations/1"
+```
+
+#### Respuesta exitosa `200 OK`
+
+_Mismo formato que la respuesta de crear ubicación._
+
+#### Errores posibles
+
+| Código | Condición                    |
+|--------|------------------------------|
+| `404`  | La ubicación no existe       |
+
+---
+
+### 8.4 Actualizar ubicación
+
+Actualiza parcialmente los campos de una ubicación.
+
+```
+PATCH /api/v1/locations/{location_id}
+```
+
+#### Path Parameters
+
+| Parámetro     | Tipo  | Descripción               |
+|---------------|-------|---------------------------|
+| `location_id` | `int` | ID único de la ubicación  |
+
+#### Body (JSON) — todos los campos son opcionales
+
+| Campo                | Tipo     | Descripción                        |
+|----------------------|----------|------------------------------------|
+| `country`            | `string` | País                               |
+| `province`           | `string` | Provincia                          |
+| `municipality`       | `string` | Municipio                          |
+| `sector`             | `string` | Sector o barrio                    |
+| `address_line`       | `string` | Dirección exacta                   |
+| `reference_point`    | `string` | Punto de referencia                |
+| `additional_details` | `string` | Detalles adicionales               |
+
+#### Ejemplo de petición
+
+```bash
+curl -X PATCH "https://mercado-plug-api.onrender.com/api/v1/locations/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sector": "Los Trinitarios",
+    "address_line": "Calle Principal #45"
+  }'
+```
+
+#### Respuesta exitosa `200 OK`
+
+_Mismo formato que la respuesta de crear ubicación con los campos actualizados._
+
+#### Errores posibles
+
+| Código | Condición                    |
+|--------|------------------------------|
+| `404`  | La ubicación no existe       |
+
+---
+
+### 8.5 Eliminar ubicación
+
+```
+DELETE /api/v1/locations/{location_id}
+```
+
+> Al eliminar una ubicación, el campo `location_id` de las tiendas que la referenciaban se pone automáticamente en `null` (`SET NULL`).
+
+#### Path Parameters
+
+| Parámetro     | Tipo  | Descripción               |
+|---------------|-------|---------------------------|
+| `location_id` | `int` | ID único de la ubicación  |
+
+#### Ejemplo de petición
+
+```bash
+curl -X DELETE "https://mercado-plug-api.onrender.com/api/v1/locations/1"
+```
+
+#### Respuesta exitosa `204 No Content`
+
+_Sin cuerpo de respuesta._
+
+#### Errores posibles
+
+| Código | Condición                    |
+|--------|------------------------------|
+| `404`  | La ubicación no existe       |
+
+---
+
+## 9. Modelos de Datos
 
 ### Usuario (`User`)
 
@@ -683,9 +906,24 @@ _Sin cuerpo de respuesta._
 }
 ```
 
+### Ubicación (`Location`)
+
+```json
+{
+  "id": 1,
+  "country": "República Dominicana",
+  "province": "string",
+  "municipality": "string | null",
+  "sector": "string | null",
+  "address_line": "string | null",
+  "reference_point": "string | null",
+  "additional_details": "string | null"
+}
+```
+
 ---
 
-## 9. Enumeraciones
+## 10. Enumeraciones
 
 ### `role` — Rol del usuario
 
@@ -713,7 +951,7 @@ _Sin cuerpo de respuesta._
 
 ---
 
-## 10. Paginación
+## 11. Paginación
 
 El endpoint de listado soporta paginación por offset:
 
@@ -736,7 +974,7 @@ total_paginas = ceil(total / limit)
 
 ---
 
-## 11. Ejemplos de Integración
+## 12. Ejemplos de Integración
 
 ### JavaScript / Fetch
 
@@ -844,7 +1082,7 @@ Future<Map<String, dynamic>> getUser(int id) async {
 
 ---
 
-## 12. Variables de Entorno
+## 13. Variables de Entorno
 
 El proyecto requiere las siguientes variables de entorno. Se deben definir en un archivo `.env` en la raíz del proyecto (no incluido en el repositorio):
 
@@ -861,7 +1099,7 @@ cp .env.example .env
 
 ---
 
-## 13. Despliegue en Render
+## 14. Despliegue en Render
 
 El proyecto incluye `render.yaml` para despliegue automático.
 
@@ -900,4 +1138,4 @@ backend/
 
 ---
 
-*Documentación generada para Mercado Plug API v0.2.0 — Mayo 2026*
+*Documentación generada para Mercado Plug API v0.3.0 — Mayo 2026*

@@ -24,7 +24,7 @@ class Store(Base):
     logo_url = Column(String(500), nullable=True)
     cover_image_url = Column(String(500), nullable=True)
     whatsapp_number = Column(String(30), nullable=True)
-    location_id = Column(Integer, nullable=True)
+    location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True)
     status = Column(Enum(StoreStatus), nullable=False, default=StoreStatus.active)
     created_at = Column(
         DateTime(timezone=True),
@@ -33,3 +33,4 @@ class Store(Base):
     )
 
     seller = relationship("User", backref="stores")
+    location = relationship("Location", backref="stores")
