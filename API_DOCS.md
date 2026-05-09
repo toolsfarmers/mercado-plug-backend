@@ -1,6 +1,6 @@
 # Mercado Plug — Documentación Técnica de Integración
 
-**Versión:** 0.3.0  
+**Versión:** 0.5.0  
 **Base URL (producción):** `https://mercado-plug-api.onrender.com`  
 **Base URL (local):** `http://localhost:8000`  
 **Prefijo de todos los endpoints:** `/api/v1`  
@@ -35,12 +35,18 @@
    - [Obtener ubicación por ID](#83-obtener-ubicación-por-id)
    - [Actualizar ubicación](#84-actualizar-ubicación)
    - [Eliminar ubicación](#85-eliminar-ubicación)
-9. [Modelos de Datos](#9-modelos-de-datos)
-10. [Enumeraciones](#10-enumeraciones)
-11. [Paginación](#11-paginación)
-12. [Ejemplos de Integración](#12-ejemplos-de-integración)
-13. [Variables de Entorno](#13-variables-de-entorno)
-14. [Despliegue en Render](#14-despliegue-en-render)
+9. [Módulo de Productos y Servicios](#9-módulo-de-productos-y-servicios)
+   - [Crear producto/servicio](#91-crear-productoservicio)
+   - [Listar productos/servicios](#92-listar-productosservicios)
+   - [Obtener producto por ID](#93-obtener-producto-por-id)
+   - [Actualizar producto/servicio](#94-actualizar-productoservicio)
+   - [Eliminar producto/servicio](#95-eliminar-productoservicio)
+10. [Modelos de Datos](#10-modelos-de-datos)
+11. [Enumeraciones](#11-enumeraciones)
+12. [Paginación](#12-paginación)
+13. [Ejemplos de Integración](#13-ejemplos-de-integración)
+14. [Variables de Entorno](#14-variables-de-entorno)
+15. [Despliegue en Render](#15-despliegue-en-render)
 
 ---
 
@@ -878,7 +884,281 @@ _Sin cuerpo de respuesta._
 
 ---
 
-## 9. Modelos de Datos
+## 9. Módulo de Productos y Servicios
+
+Gestiona los productos y servicios que los vendedores publican en sus tiendas. El `location_id` se hereda automáticamente de la tienda al crear el producto.
+
+### 9.1 Crear producto/servicio
+
+```
+POST /api/v1/products/
+```
+
+> **Auto-ubicación:** El `location_id` del producto se asigna automáticamente desde la ubicación de la tienda (`store.location_id`), sin necesidad de enviarlo en el payload.
+
+#### Body (JSON)
+
+| Campo          | Tipo           | Requerido | Descripción                                                             |
+|----------------|----------------|-----------|-------------------------------------------------------------------------|
+| `store_id`     | `int`          | Sí        | ID de la tienda a la que pertenece el producto                          |
+| `name`         | `string`       | Sí        | Nombre del producto o servicio                                          |
+| `description`  | `string`       | No        | Descripción detallada                                                   |
+| `price`        | `number`       | Sí        | Precio (no puede ser negativo)                                          |
+| `currency`     | `string`       | No        | Moneda (defecto: `"DOP"`)                                               |
+| `category`     | `string`       | No        | Categoría libre (ej: `"Electrónica"`, `"Ropa"`, `"Consultoría"`)       |
+| `type`         | `string`       | No        | `product` (defecto) o `service`                                         |
+| `images`       | `array[string]`| No        | Lista de URLs de imágenes (máximo 10)                                   |
+| `stock_status` | `string`       | No        | `available` (defecto) o `unavailable`                                   |
+| `delivery`     | `boolean`      | No        | `true` si tiene entrega a domicilio (defecto: `false`)                  |
+
+#### Ejemplo — Producto físico
+
+```bash
+curl -X POST "https://mercado-plug-api.onrender.com/api/v1/products/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "store_id": 1,
+    "name": "Audífonos Bluetooth Pro",
+    "description": "Audífonos inalámbricos con cancelación de ruido",
+    "price": 3500.00,
+    "currency": "DOP",
+    "category": "Electrónica",
+    "type": "product",
+    "images": [
+      "https://cdn.mercadoplug.com/img/audifonos-1.jpg",
+      "https://cdn.mercadoplug.com/img/audifonos-2.jpg"
+    ],
+    "stock_status": "available",
+    "delivery": true
+  }'
+```
+
+#### Ejemplo — Servicio
+
+```bash
+curl -X POST "https://mercado-plug-api.onrender.com/api/v1/products/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "store_id": 1,
+    "name": "Diseño de logo profesional",
+    "description": "Diseño de identidad visual completa en 5 días",
+    "price": 8000.00,
+    "currency": "DOP",
+    "category": "Diseño",
+    "type": "service",
+    "delivery": false
+  }'
+```
+
+#### Respuesta exitosa `201 Created`
+
+```json
+{
+  "id": 1,
+  "store_id": 1,
+  "name": "Audífonos Bluetooth Pro",
+  "description": "Audífonos inalámbricos con cancelación de ruido",
+  "price": "3500.00",
+  "currency": "DOP",
+  "category": "Electrónica",
+  "type": "product",
+  "images": [
+    "https://cdn.mercadoplug.com/img/audifonos-1.jpg",
+    "https://cdn.mercadoplug.com/img/audifonos-2.jpg"
+  ],
+  "stock_status": "available",
+  "location_id": 7,
+  "status": "active",
+  "delivery": true,
+  "created_at": "2026-05-08T18:00:00Z"
+}
+```
+
+#### Errores posibles
+
+| Código | Condición                                             |
+|--------|-------------------------------------------------------|
+| `400`  | La tienda no está activa                              |
+| `404`  | La tienda no existe                                   |
+| `422`  | Precio negativo, más de 10 imágenes, campos inválidos |
+
+---
+
+### 9.2 Listar productos/servicios
+
+Devuelve únicamente productos con `status: active`. Soporta múltiples filtros combinables.
+
+```
+GET /api/v1/products/
+```
+
+#### Query Parameters
+
+| Parámetro      | Tipo      | Defecto | Descripción                                        |
+|----------------|-----------|---------|----------------------------------------------------|
+| `skip`         | `int`     | `0`     | Offset de paginación                               |
+| `limit`        | `int`     | `20`    | Máximo de resultados (máx. `100`)                  |
+| `store_id`     | `int`     | —       | Filtrar por tienda                                 |
+| `category`     | `string`  | —       | Filtrar por categoría (búsqueda parcial)            |
+| `type`         | `string`  | —       | `product` o `service`                              |
+| `stock_status` | `string`  | —       | `available` o `unavailable`                        |
+| `delivery`     | `boolean` | —       | `true` o `false`                                   |
+
+#### Ejemplo de petición
+
+```bash
+# Todos los productos activos
+curl "https://mercado-plug-api.onrender.com/api/v1/products/"
+
+# Solo servicios con entrega disponible
+curl "https://mercado-plug-api.onrender.com/api/v1/products/?type=service&delivery=true"
+
+# Productos de una tienda específica por categoría
+curl "https://mercado-plug-api.onrender.com/api/v1/products/?store_id=1&category=Electrónica"
+```
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "total": 25,
+  "products": [
+    {
+      "id": 1,
+      "store_id": 1,
+      "name": "Audífonos Bluetooth Pro",
+      "description": "Audífonos inalámbricos con cancelación de ruido",
+      "price": "3500.00",
+      "currency": "DOP",
+      "category": "Electrónica",
+      "type": "product",
+      "images": ["https://cdn.mercadoplug.com/img/audifonos-1.jpg"],
+      "stock_status": "available",
+      "location_id": 7,
+      "status": "active",
+      "delivery": true,
+      "created_at": "2026-05-08T18:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 9.3 Obtener producto por ID
+
+```
+GET /api/v1/products/{product_id}
+```
+
+#### Path Parameters
+
+| Parámetro    | Tipo  | Descripción              |
+|--------------|-------|--------------------------|
+| `product_id` | `int` | ID único del producto    |
+
+#### Ejemplo de petición
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/products/1"
+```
+
+#### Respuesta exitosa `200 OK`
+
+_Mismo formato que el objeto dentro de `products[]` en el listado._
+
+#### Errores posibles
+
+| Código | Condición                 |
+|--------|---------------------------|
+| `404`  | El producto no existe     |
+
+---
+
+### 9.4 Actualizar producto/servicio
+
+Actualiza parcialmente los campos de un producto o servicio.
+
+```
+PATCH /api/v1/products/{product_id}
+```
+
+#### Path Parameters
+
+| Parámetro    | Tipo  | Descripción           |
+|--------------|-------|-----------------------|
+| `product_id` | `int` | ID único del producto |
+
+#### Body (JSON) — todos los campos son opcionales
+
+| Campo          | Tipo            | Descripción                                          |
+|----------------|-----------------|------------------------------------------------------|
+| `name`         | `string`        | Nuevo nombre                                         |
+| `description`  | `string`        | Nueva descripción                                    |
+| `price`        | `number`        | Nuevo precio                                         |
+| `currency`     | `string`        | Nueva moneda                                         |
+| `category`     | `string`        | Nueva categoría                                      |
+| `type`         | `string`        | `product` o `service`                                |
+| `images`       | `array[string]` | Reemplaza toda la lista de imágenes (máx. 10)        |
+| `stock_status` | `string`        | `available` o `unavailable`                          |
+| `status`       | `string`        | `active`, `inactive` o `archived`                    |
+| `delivery`     | `boolean`       | `true` o `false`                                     |
+
+#### Ejemplo de petición
+
+```bash
+curl -X PATCH "https://mercado-plug-api.onrender.com/api/v1/products/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "price": 3200.00,
+    "stock_status": "unavailable"
+  }'
+```
+
+#### Respuesta exitosa `200 OK`
+
+_Mismo formato que obtener producto, con los campos actualizados._
+
+#### Errores posibles
+
+| Código | Condición                              |
+|--------|----------------------------------------|
+| `404`  | El producto no existe                  |
+| `422`  | Precio negativo o más de 10 imágenes   |
+
+---
+
+### 9.5 Eliminar producto/servicio
+
+```
+DELETE /api/v1/products/{product_id}
+```
+
+#### Path Parameters
+
+| Parámetro    | Tipo  | Descripción           |
+|--------------|-------|-----------------------|
+| `product_id` | `int` | ID único del producto |
+
+#### Ejemplo de petición
+
+```bash
+curl -X DELETE "https://mercado-plug-api.onrender.com/api/v1/products/1"
+```
+
+#### Respuesta exitosa `204 No Content`
+
+_Sin cuerpo de respuesta._
+
+#### Errores posibles
+
+| Código | Condición                 |
+|--------|---------------------------|
+| `404`  | El producto no existe     |
+
+---
+
+## 10. Modelos de Datos
 
 ### Usuario (`User`)
 
@@ -930,9 +1210,30 @@ _Sin cuerpo de respuesta._
 }
 ```
 
+### Producto / Servicio (`Product`)
+
+```json
+{
+  "id": 1,
+  "store_id": 1,
+  "name": "string",
+  "description": "string | null",
+  "price": "3500.00",
+  "currency": "DOP",
+  "category": "string | null",
+  "type": "product | service",
+  "images": ["url1", "url2"],
+  "stock_status": "available | unavailable",
+  "location_id": "int | null",
+  "status": "active | inactive | archived",
+  "delivery": true,
+  "created_at": "2026-05-08T18:00:00Z"
+}
+```
+
 ---
 
-## 10. Enumeraciones
+## 11. Enumeraciones
 
 ### `role` — Rol del usuario
 
@@ -958,9 +1259,31 @@ _Sin cuerpo de respuesta._
 | `inactive`  | Tienda desactivada temporalmente por el vendedor.     |
 | `suspended` | Tienda suspendida por el administrador.               |
 
+### `type` — Tipo de publicación
+
+| Valor     | Descripción                                          |
+|-----------|------------------------------------------------------|
+| `product` | Artículo físico o digital. (defecto)                 |
+| `service` | Servicio ofrecido por el vendedor.                   |
+
+### `stock_status` — Disponibilidad del producto
+
+| Valor         | Descripción                                          |
+|---------------|------------------------------------------------------|
+| `available`   | Disponible para compra. (defecto)                    |
+| `unavailable` | Sin stock o fuera de disponibilidad temporalmente.   |
+
+### `status` (Producto) — Estado del producto
+
+| Valor      | Descripción                                              |
+|------------|----------------------------------------------------------|
+| `active`   | Publicado y visible en el marketplace. (defecto)         |
+| `inactive` | Oculto temporalmente por el vendedor.                    |
+| `archived` | Archivado. No visible ni editable normalmente.           |
+
 ---
 
-## 11. Paginación
+## 12. Paginación
 
 El endpoint de listado soporta paginación por offset:
 
@@ -983,7 +1306,7 @@ total_paginas = ceil(total / limit)
 
 ---
 
-## 12. Ejemplos de Integración
+## 13. Ejemplos de Integración
 
 ### JavaScript / Fetch
 
@@ -1091,7 +1414,7 @@ Future<Map<String, dynamic>> getUser(int id) async {
 
 ---
 
-## 13. Variables de Entorno
+## 14. Variables de Entorno
 
 El proyecto requiere las siguientes variables de entorno. Se deben definir en un archivo `.env` en la raíz del proyecto (no incluido en el repositorio):
 
@@ -1108,7 +1431,7 @@ cp .env.example .env
 
 ---
 
-## 14. Despliegue en Render
+## 15. Despliegue en Render
 
 El proyecto incluye `render.yaml` para despliegue automático.
 
@@ -1147,4 +1470,4 @@ backend/
 
 ---
 
-*Documentación generada para Mercado Plug API v0.4.0 — Mayo 2026*
+*Documentación generada para Mercado Plug API v0.5.0 — Mayo 2026*
