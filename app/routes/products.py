@@ -48,6 +48,7 @@ def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
         type=payload.type,
         images=payload.images,
         stock_status=payload.stock_status,
+        whatsapp_number=store.whatsapp_number,
         location_id=store.location_id,
         delivery=payload.delivery,
     )

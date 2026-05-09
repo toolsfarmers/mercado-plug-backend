@@ -51,6 +51,7 @@ class ProductUpdate(BaseModel):
     type: Optional[ProductType] = None
     images: Optional[list[str]] = None
     stock_status: Optional[StockStatus] = None
+    whatsapp_number: Optional[str] = None
     status: Optional[ProductStatus] = None
     delivery: Optional[bool] = None
 
@@ -80,6 +81,7 @@ class ProductResponse(BaseModel):
     type: ProductType
     images: list[str]
     stock_status: StockStatus
+    whatsapp_number: Optional[str] = None
     location_id: Optional[int] = None
     status: ProductStatus
     delivery: bool

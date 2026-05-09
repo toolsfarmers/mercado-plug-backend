@@ -39,6 +39,7 @@ class Product(Base):
     type = Column(Enum(ProductType), nullable=False, default=ProductType.product)
     images = Column(JSON, nullable=False, default=list)
     stock_status = Column(Enum(StockStatus), nullable=False, default=StockStatus.available)
+    whatsapp_number = Column(String(30), nullable=True)
     location_id = Column(
         Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True
     )
