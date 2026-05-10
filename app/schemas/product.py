@@ -1,3 +1,4 @@
+import enum
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
@@ -5,6 +6,13 @@ from typing import Optional
 from pydantic import BaseModel, field_validator
 
 from app.models.product import ProductStatus, ProductType, StockStatus
+
+
+class SortBy(str, enum.Enum):
+    newest = "newest"
+    price_asc = "price_asc"
+    price_desc = "price_desc"
+    most_interacted = "most_interacted"
 
 
 class ProductCreate(BaseModel):
@@ -91,5 +99,11 @@ class ProductResponse(BaseModel):
 
 
 class ProductListResponse(BaseModel):
+    total: int
+    products: list[ProductResponse]
+
+
+class FeedResponse(BaseModel):
+    feed_type: str
     total: int
     products: list[ProductResponse]

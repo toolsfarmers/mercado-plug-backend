@@ -989,9 +989,9 @@ curl -X POST "https://mercado-plug-api.onrender.com/api/v1/products/" \
 
 ---
 
-### 9.2 Listar productos/servicios
+### 9.2 Buscar y listar productos/servicios
 
-Devuelve únicamente productos con `status: active`. Soporta múltiples filtros combinables.
+Devuelve únicamente productos con `status: active`. Todos los filtros son opcionales y combinables.
 
 ```
 GET /api/v1/products/
@@ -999,27 +999,36 @@ GET /api/v1/products/
 
 #### Query Parameters
 
-| Parámetro      | Tipo      | Defecto | Descripción                                        |
-|----------------|-----------|---------|----------------------------------------------------|
-| `skip`         | `int`     | `0`     | Offset de paginación                               |
-| `limit`        | `int`     | `20`    | Máximo de resultados (máx. `100`)                  |
-| `store_id`     | `int`     | —       | Filtrar por tienda                                 |
-| `category`     | `string`  | —       | Filtrar por categoría (búsqueda parcial)            |
-| `type`         | `string`  | —       | `product` o `service`                              |
-| `stock_status` | `string`  | —       | `available` o `unavailable`                        |
-| `delivery`     | `boolean` | —       | `true` o `false`                                   |
+| Parámetro      | Tipo      | Defecto   | Descripción                                                     |
+|----------------|-----------|-----------|-----------------------------------------------------------------|
+| `skip`         | `int`     | `0`       | Offset de paginación                                            |
+| `limit`        | `int`     | `20`      | Máximo de resultados (máx. `100`)                               |
+| `search`       | `string`  | —         | Búsqueda de texto libre en **nombre** y **descripción**         |
+| `store_id`     | `int`     | —         | Filtrar por tienda                                              |
+| `category`     | `string`  | —         | Filtrar por categoría (búsqueda parcial, sin distinción mayúsculas) |
+| `type`         | `string`  | —         | `product` o `service`                                           |
+| `stock_status` | `string`  | —         | `available` o `unavailable`                                     |
+| `delivery`     | `boolean` | —         | `true` o `false`                                                |
+| `min_price`    | `number`  | —         | Precio mínimo                                                   |
+| `max_price`    | `number`  | —         | Precio máximo                                                   |
+| `province`     | `string`  | —         | Filtrar por provincia (búsqueda parcial)                        |
+| `municipality` | `string`  | —         | Filtrar por municipio (búsqueda parcial)                        |
+| `sort_by`      | `string`  | `newest`  | `newest` · `price_asc` · `price_desc` · `most_interacted`      |
 
-#### Ejemplo de petición
+#### Ejemplos de petición
 
 ```bash
-# Todos los productos activos
-curl "https://mercado-plug-api.onrender.com/api/v1/products/"
+# Búsqueda libre de texto
+curl "https://mercado-plug-api.onrender.com/api/v1/products/?search=audifonos"
 
-# Solo servicios con entrega disponible
-curl "https://mercado-plug-api.onrender.com/api/v1/products/?type=service&delivery=true"
+# Filtro por rango de precio y categoría, ordenado por precio ascendente
+curl "https://mercado-plug-api.onrender.com/api/v1/products/?category=Electrónica&min_price=500&max_price=5000&sort_by=price_asc"
 
-# Productos de una tienda específica por categoría
-curl "https://mercado-plug-api.onrender.com/api/v1/products/?store_id=1&category=Electrónica"
+# Servicios con entrega en Santo Domingo
+curl "https://mercado-plug-api.onrender.com/api/v1/products/?type=service&delivery=true&province=Santo+Domingo"
+
+# Productos más interactuados de una tienda
+curl "https://mercado-plug-api.onrender.com/api/v1/products/?store_id=1&sort_by=most_interacted"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -1039,6 +1048,7 @@ curl "https://mercado-plug-api.onrender.com/api/v1/products/?store_id=1&category
       "type": "product",
       "images": ["https://cdn.mercadoplug.com/img/audifonos-1.jpg"],
       "stock_status": "available",
+      "whatsapp_number": "+1 809-555-9999",
       "location_id": 7,
       "status": "active",
       "delivery": true,
@@ -1050,7 +1060,53 @@ curl "https://mercado-plug-api.onrender.com/api/v1/products/?store_id=1&category
 
 ---
 
-### 9.3 Obtener producto por ID
+### 9.3 Feed de productos (personalizado / trending)
+
+Endpoint principal del feed del marketplace. Devuelve productos personalizados si se envía `user_id`, o los productos más populares (trending) si es anónimo.
+
+```
+GET /api/v1/products/feed
+```
+
+**Lógica del feed:**
+- **Personalizado** (`user_id` presente y con historial): carga las top 5 categorías más clickeadas del usuario desde sus interacciones y retorna productos de esas categorías ordenados por popularidad.
+- **Trending** (anónimo o usuario sin historial): retorna los productos con más interacciones en la plataforma.
+
+#### Query Parameters
+
+| Parámetro | Tipo  | Defecto | Descripción                                                    |
+|-----------|-------|---------|----------------------------------------------------------------|
+| `user_id` | `int` | —       | ID del usuario para feed personalizado. Omitir para trending.  |
+| `skip`    | `int` | `0`     | Offset de paginación                                           |
+| `limit`   | `int` | `20`    | Máximo de resultados (máx. `50`)                               |
+
+#### Ejemplo — feed personalizado
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/products/feed?user_id=5"
+```
+
+#### Ejemplo — feed trending (anónimo)
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/products/feed"
+```
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "feed_type": "personalized",
+  "total": 18,
+  "products": [ ... ]
+}
+```
+
+> `feed_type` puede ser `"personalized"` o `"trending"`. Úsalo en el cliente para mostrar el título correcto del feed.
+
+---
+
+### 9.5 Obtener producto por ID
 
 ```
 GET /api/v1/products/{product_id}
@@ -1080,7 +1136,7 @@ _Mismo formato que el objeto dentro de `products[]` en el listado._
 
 ---
 
-### 9.4 Actualizar producto/servicio
+### 9.6 Actualizar producto/servicio
 
 Actualiza parcialmente los campos de un producto o servicio.
 
@@ -1133,7 +1189,7 @@ _Mismo formato que obtener producto, con los campos actualizados._
 
 ---
 
-### 9.5 Eliminar producto/servicio
+### 9.7 Eliminar producto/servicio
 
 ```
 DELETE /api/v1/products/{product_id}
@@ -1694,4 +1750,4 @@ backend/
 
 ---
 
-*Documentación generada para Mercado Plug API v0.6.0 — Mayo 2026*
+*Documentación generada para Mercado Plug API v0.7.0 — Mayo 2026*
