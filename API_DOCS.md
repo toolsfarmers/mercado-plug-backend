@@ -1,11 +1,11 @@
 # Mercado Plug — Documentación Técnica de Integración
 
-**Versión:** 0.6.0  
-**Base URL (producción):** `https://mercado-plug-api.onrender.com`  
+**Versión:** 0.8.0  
+**Base URL (producción):** `https://mercado-plug-backend.onrender.com`  
 **Base URL (local):** `http://localhost:8000`  
 **Prefijo de todos los endpoints:** `/api/v1`  
-**Documentación interactiva (Swagger):** `{BASE_URL}/api/v1/docs`  
-**Documentación alternativa (ReDoc):** `{BASE_URL}/api/v1/redoc`
+**Documentación interactiva (Swagger):** `https://mercado-plug-backend.onrender.com/api/v1/docs`  
+**Documentación alternativa (ReDoc):** `https://mercado-plug-backend.onrender.com/api/v1/redoc`
 
 ---
 
@@ -171,7 +171,7 @@ POST /api/v1/users/
 #### Ejemplo de petición
 
 ```bash
-curl -X POST "https://mercado-plug-api.onrender.com/api/v1/users/" \
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/users/" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Ana García",
@@ -226,7 +226,7 @@ GET /api/v1/users/
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/users/?skip=0&limit=10"
+curl "https://mercado-plug-backend.onrender.com/api/v1/users/?skip=0&limit=10"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -276,7 +276,7 @@ GET /api/v1/users/{user_id}
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/users/1"
+curl "https://mercado-plug-backend.onrender.com/api/v1/users/1"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -327,7 +327,7 @@ PATCH /api/v1/users/{user_id}
 #### Ejemplo de petición
 
 ```bash
-curl -X PATCH "https://mercado-plug-api.onrender.com/api/v1/users/1" \
+curl -X PATCH "https://mercado-plug-backend.onrender.com/api/v1/users/1" \
   -H "Content-Type: application/json" \
   -d '{
     "status": "inactive"
@@ -374,7 +374,7 @@ DELETE /api/v1/users/{user_id}
 #### Ejemplo de petición
 
 ```bash
-curl -X DELETE "https://mercado-plug-api.onrender.com/api/v1/users/1"
+curl -X DELETE "https://mercado-plug-backend.onrender.com/api/v1/users/1"
 ```
 
 #### Respuesta exitosa `204 No Content`
@@ -424,7 +424,7 @@ POST /api/v1/stores/
 #### Ejemplo de petición
 
 ```bash
-curl -X POST "https://mercado-plug-api.onrender.com/api/v1/stores/" \
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/stores/" \
   -H "Content-Type: application/json" \
   -d '{
     "seller_id": 2,
@@ -483,10 +483,10 @@ GET /api/v1/stores/
 
 ```bash
 # Todas las tiendas
-curl "https://mercado-plug-api.onrender.com/api/v1/stores/"
+curl "https://mercado-plug-backend.onrender.com/api/v1/stores/"
 
 # Tiendas de un vendedor específico
-curl "https://mercado-plug-api.onrender.com/api/v1/stores/?seller_id=2"
+curl "https://mercado-plug-backend.onrender.com/api/v1/stores/?seller_id=2"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -529,7 +529,7 @@ GET /api/v1/stores/{store_id}
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/stores/1"
+curl "https://mercado-plug-backend.onrender.com/api/v1/stores/1"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -575,7 +575,7 @@ GET /api/v1/stores/slug/{slug}
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/stores/slug/electronica-rapida"
+curl "https://mercado-plug-backend.onrender.com/api/v1/stores/slug/electronica-rapida"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -620,7 +620,7 @@ PATCH /api/v1/stores/{store_id}
 #### Ejemplo de petición
 
 ```bash
-curl -X PATCH "https://mercado-plug-api.onrender.com/api/v1/stores/1" \
+curl -X PATCH "https://mercado-plug-backend.onrender.com/api/v1/stores/1" \
   -H "Content-Type: application/json" \
   -d '{
     "logo_url": "https://cdn.mercadoplug.com/logos/electronica-rapida.png",
@@ -657,7 +657,7 @@ DELETE /api/v1/stores/{store_id}
 #### Ejemplo de petición
 
 ```bash
-curl -X DELETE "https://mercado-plug-api.onrender.com/api/v1/stores/1"
+curl -X DELETE "https://mercado-plug-backend.onrender.com/api/v1/stores/1"
 ```
 
 #### Respuesta exitosa `204 No Content`
@@ -697,7 +697,7 @@ POST /api/v1/locations/
 #### Ejemplo de petición
 
 ```bash
-curl -X POST "https://mercado-plug-api.onrender.com/api/v1/locations/" \
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/locations/" \
   -H "Content-Type: application/json" \
   -d '{
     "province": "Santo Domingo",
@@ -750,10 +750,10 @@ GET /api/v1/locations/
 
 ```bash
 # Todas las ubicaciones
-curl "https://mercado-plug-api.onrender.com/api/v1/locations/"
+curl "https://mercado-plug-backend.onrender.com/api/v1/locations/"
 
 # Filtrar por provincia
-curl "https://mercado-plug-api.onrender.com/api/v1/locations/?province=Santiago"
+curl "https://mercado-plug-backend.onrender.com/api/v1/locations/?province=Santiago"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -793,7 +793,7 @@ GET /api/v1/locations/{location_id}
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/locations/1"
+curl "https://mercado-plug-backend.onrender.com/api/v1/locations/1"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -837,7 +837,7 @@ PATCH /api/v1/locations/{location_id}
 #### Ejemplo de petición
 
 ```bash
-curl -X PATCH "https://mercado-plug-api.onrender.com/api/v1/locations/1" \
+curl -X PATCH "https://mercado-plug-backend.onrender.com/api/v1/locations/1" \
   -H "Content-Type: application/json" \
   -d '{
     "sector": "Los Trinitarios",
@@ -874,7 +874,7 @@ DELETE /api/v1/locations/{location_id}
 #### Ejemplo de petición
 
 ```bash
-curl -X DELETE "https://mercado-plug-api.onrender.com/api/v1/locations/1"
+curl -X DELETE "https://mercado-plug-backend.onrender.com/api/v1/locations/1"
 ```
 
 #### Respuesta exitosa `204 No Content`
@@ -919,7 +919,7 @@ POST /api/v1/products/
 #### Ejemplo — Producto físico
 
 ```bash
-curl -X POST "https://mercado-plug-api.onrender.com/api/v1/products/" \
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/products/" \
   -H "Content-Type: application/json" \
   -d '{
     "store_id": 1,
@@ -941,7 +941,7 @@ curl -X POST "https://mercado-plug-api.onrender.com/api/v1/products/" \
 #### Ejemplo — Servicio
 
 ```bash
-curl -X POST "https://mercado-plug-api.onrender.com/api/v1/products/" \
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/products/" \
   -H "Content-Type: application/json" \
   -d '{
     "store_id": 1,
@@ -1019,16 +1019,16 @@ GET /api/v1/products/
 
 ```bash
 # Búsqueda libre de texto
-curl "https://mercado-plug-api.onrender.com/api/v1/products/?search=audifonos"
+curl "https://mercado-plug-backend.onrender.com/api/v1/products/?search=audifonos"
 
 # Filtro por rango de precio y categoría, ordenado por precio ascendente
-curl "https://mercado-plug-api.onrender.com/api/v1/products/?category=Electrónica&min_price=500&max_price=5000&sort_by=price_asc"
+curl "https://mercado-plug-backend.onrender.com/api/v1/products/?category=Electrónica&min_price=500&max_price=5000&sort_by=price_asc"
 
 # Servicios con entrega en Santo Domingo
-curl "https://mercado-plug-api.onrender.com/api/v1/products/?type=service&delivery=true&province=Santo+Domingo"
+curl "https://mercado-plug-backend.onrender.com/api/v1/products/?type=service&delivery=true&province=Santo+Domingo"
 
 # Productos más interactuados de una tienda
-curl "https://mercado-plug-api.onrender.com/api/v1/products/?store_id=1&sort_by=most_interacted"
+curl "https://mercado-plug-backend.onrender.com/api/v1/products/?store_id=1&sort_by=most_interacted"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -1083,13 +1083,13 @@ GET /api/v1/products/feed
 #### Ejemplo — feed personalizado
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/products/feed?user_id=5"
+curl "https://mercado-plug-backend.onrender.com/api/v1/products/feed?user_id=5"
 ```
 
 #### Ejemplo — feed trending (anónimo)
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/products/feed"
+curl "https://mercado-plug-backend.onrender.com/api/v1/products/feed"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -1121,7 +1121,7 @@ GET /api/v1/products/{product_id}
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/products/1"
+curl "https://mercado-plug-backend.onrender.com/api/v1/products/1"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -1168,7 +1168,7 @@ PATCH /api/v1/products/{product_id}
 #### Ejemplo de petición
 
 ```bash
-curl -X PATCH "https://mercado-plug-api.onrender.com/api/v1/products/1" \
+curl -X PATCH "https://mercado-plug-backend.onrender.com/api/v1/products/1" \
   -H "Content-Type: application/json" \
   -d '{
     "price": 3200.00,
@@ -1204,7 +1204,7 @@ DELETE /api/v1/products/{product_id}
 #### Ejemplo de petición
 
 ```bash
-curl -X DELETE "https://mercado-plug-api.onrender.com/api/v1/products/1"
+curl -X DELETE "https://mercado-plug-backend.onrender.com/api/v1/products/1"
 ```
 
 #### Respuesta exitosa `204 No Content`
@@ -1253,7 +1253,7 @@ El `store_id` se resuelve automáticamente desde el producto. No es necesario en
 #### Ejemplo de petición — usuario logueado
 
 ```bash
-curl -X POST "https://mercado-plug-api.onrender.com/api/v1/interactions/" \
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/interactions/" \
   -H "Content-Type: application/json" \
   -d '{
     "product_id": 1,
@@ -1265,7 +1265,7 @@ curl -X POST "https://mercado-plug-api.onrender.com/api/v1/interactions/" \
 #### Ejemplo de petición — usuario anónimo
 
 ```bash
-curl -X POST "https://mercado-plug-api.onrender.com/api/v1/interactions/" \
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/interactions/" \
   -H "Content-Type: application/json" \
   -d '{
     "product_id": 1,
@@ -1313,7 +1313,7 @@ GET /api/v1/interactions/stats/store/{store_id}
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/interactions/stats/store/1"
+curl "https://mercado-plug-backend.onrender.com/api/v1/interactions/stats/store/1"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -1357,7 +1357,7 @@ GET /api/v1/interactions/stats/admin
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/interactions/stats/admin"
+curl "https://mercado-plug-backend.onrender.com/api/v1/interactions/stats/admin"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -1401,7 +1401,7 @@ GET /api/v1/interactions/users/{user_id}/interests
 #### Ejemplo de petición
 
 ```bash
-curl "https://mercado-plug-api.onrender.com/api/v1/interactions/users/5/interests"
+curl "https://mercado-plug-backend.onrender.com/api/v1/interactions/users/5/interests"
 ```
 
 #### Respuesta exitosa `200 OK`
@@ -1592,7 +1592,7 @@ total_paginas = ceil(total / limit)
 
 ```javascript
 // Crear un usuario
-const response = await fetch('https://mercado-plug-api.onrender.com/api/v1/users/', {
+const response = await fetch('https://mercado-plug-backend.onrender.com/api/v1/users/', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1605,7 +1605,7 @@ const response = await fetch('https://mercado-plug-api.onrender.com/api/v1/users
 const user = await response.json();
 
 // Crear una tienda para ese usuario
-const storeRes = await fetch('https://mercado-plug-api.onrender.com/api/v1/stores/', {
+const storeRes = await fetch('https://mercado-plug-backend.onrender.com/api/v1/stores/', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1618,10 +1618,10 @@ const storeRes = await fetch('https://mercado-plug-api.onrender.com/api/v1/store
 const store = await storeRes.json();
 
 // Obtener tienda por slug
-const bySlug = await fetch(`https://mercado-plug-api.onrender.com/api/v1/stores/slug/${store.slug}`);
+const bySlug = await fetch(`https://mercado-plug-backend.onrender.com/api/v1/stores/slug/${store.slug}`);
 
 // Obtener usuario por ID
-const res = await fetch('https://mercado-plug-api.onrender.com/api/v1/users/1');
+const res = await fetch('https://mercado-plug-backend.onrender.com/api/v1/users/1');
 const data = await res.json();
 ```
 
@@ -1630,7 +1630,7 @@ const data = await res.json();
 ```python
 import requests
 
-BASE_URL = "https://mercado-plug-api.onrender.com/api/v1"
+BASE_URL = "https://mercado-plug-backend.onrender.com/api/v1"
 
 # Crear usuario
 payload = {
@@ -1668,7 +1668,7 @@ requests.delete(f"{BASE_URL}/users/1")
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-const baseUrl = 'https://mercado-plug-api.onrender.com/api/v1';
+const baseUrl = 'https://mercado-plug-backend.onrender.com/api/v1';
 
 // Crear usuario
 Future<Map<String, dynamic>> createUser() async {
