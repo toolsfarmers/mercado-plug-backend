@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -38,8 +38,10 @@ def _apply_filters_and_sort(query, *, search, store_id, category, type,
 
     if search:
         term = f"%{search}%"
+        # unaccent permite buscar "audifonos" y encontrar "Audífonos"
         query = query.filter(
-            Product.name.ilike(term) | Product.description.ilike(term)
+            func.unaccent(Product.name).ilike(func.unaccent(term))
+            | func.unaccent(Product.description).ilike(func.unaccent(term))
         )
     if store_id is not None:
         query = query.filter(Product.store_id == store_id)

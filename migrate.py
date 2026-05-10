@@ -9,6 +9,8 @@ from app.database import engine
 from sqlalchemy import text
 
 migrations = [
+    # Habilita extensión unaccent para búsqueda sin tildes
+    "CREATE EXTENSION IF NOT EXISTS unaccent;",
     # Agrega location_id a users (si no existe)
     """
     DO $$
