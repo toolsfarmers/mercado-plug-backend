@@ -13,6 +13,9 @@
 
 1. [Introducción](#1-introducción)
 2. [Autenticación](#2-autenticación)
+   - [Login](#21-login)
+   - [Obtener usuario autenticado](#22-obtener-usuario-autenticado-me)
+   - [Cómo usar el token](#23-cómo-usar-el-token)
 3. [Formato de Peticiones y Respuestas](#3-formato-de-peticiones-y-respuestas)
 4. [Códigos de Estado HTTP](#4-códigos-de-estado-http)
 5. [Manejo de Errores](#5-manejo-de-errores)
@@ -68,19 +71,134 @@
 
 ## 2. Autenticación
 
-> **Estado actual:** La API está en fase inicial. Los endpoints son públicos. La autenticación mediante JWT se habilitará en próximas versiones.
-
-Cuando la autenticación esté activa, se usará el esquema **Bearer Token**:
+La API usa **JWT (JSON Web Token)** con el esquema **Bearer**. El token se obtiene en el login y debe enviarse en el header `Authorization` en los endpoints protegidos.
 
 ```
 Authorization: Bearer <tu_access_token>
 ```
 
-Para obtener un token se deberá consumir el endpoint de login (próximamente):
+> Los endpoints de feed, listado de productos y tiendas son **públicos**. Los endpoints de creación, edición y eliminación requieren token.
 
-```http
-POST /api/v1/auth/login
+---
+
+### 2.1 Login
+
+Autentica un usuario existente y devuelve un JWT.
+
+**`POST /api/v1/auth/login`**
+
+#### Request body
+
+```json
+{
+  "email": "admin@mercadoplug.com",
+  "password": "Admin1234!"
+}
 ```
+
+| Campo | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| `email` | string | ✅ | Email registrado |
+| `password` | string | ✅ | Contraseña en texto plano |
+
+#### Response `200 OK`
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "name": "Admin Mercado Plug",
+    "email": "admin@mercadoplug.com",
+    "phone": "+1 809-000-0001",
+    "role": "admin",
+    "status": "active",
+    "location_id": 17,
+    "created_at": "2026-05-10T03:21:51.121816Z"
+  }
+}
+```
+
+#### Errores
+
+| Código | Descripción |
+|---|---|
+| `401` | Credenciales incorrectas |
+| `403` | Cuenta suspendida |
+
+#### Ejemplo curl
+
+```bash
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@mercadoplug.com", "password": "Admin1234!"}'
+```
+
+---
+
+### 2.2 Obtener usuario autenticado (me)
+
+Devuelve la información del usuario dueño del token.
+
+**`GET /api/v1/auth/me`** 🔒 *Requiere token*
+
+#### Response `200 OK`
+
+```json
+{
+  "id": 1,
+  "name": "Admin Mercado Plug",
+  "email": "admin@mercadoplug.com",
+  "phone": "+1 809-000-0001",
+  "role": "admin",
+  "status": "active",
+  "location_id": 17,
+  "created_at": "2026-05-10T03:21:51.121816Z"
+}
+```
+
+#### Errores
+
+| Código | Descripción |
+|---|---|
+| `401` | Token inválido, expirado o ausente |
+| `403` | Cuenta suspendida |
+
+#### Ejemplo curl
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/auth/me" \
+  -H "Authorization: Bearer <tu_token>"
+```
+
+---
+
+### 2.3 Cómo usar el token
+
+Una vez obtenido el `access_token`, inclúyelo en todas las peticiones protegidas:
+
+```javascript
+const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+
+const res = await fetch("https://mercado-plug-backend.onrender.com/api/v1/auth/me", {
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+});
+```
+
+```python
+import requests
+
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+headers = {"Authorization": f"Bearer {token}"}
+
+r = requests.get("https://mercado-plug-backend.onrender.com/api/v1/auth/me", headers=headers)
+print(r.json())
+```
+
+> El token expira en **24 horas**. Pasado ese tiempo el usuario debe volver a hacer login.
 
 ---
 

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.database import Base, engine
-from app.routes import interactions, locations, products, stores, users
+from app.routes import auth, interactions, locations, products, stores, users
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Autenticación"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["Usuarios"])
 app.include_router(stores.router, prefix=f"{settings.API_V1_STR}/stores", tags=["Tiendas"])
 app.include_router(locations.router, prefix=f"{settings.API_V1_STR}/locations", tags=["Ubicaciones"])
