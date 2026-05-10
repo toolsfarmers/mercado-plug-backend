@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.database import Base, engine
-from app.routes import locations, products, stores, users
+from app.routes import interactions, locations, products, stores, users
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,6 +27,7 @@ app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["U
 app.include_router(stores.router, prefix=f"{settings.API_V1_STR}/stores", tags=["Tiendas"])
 app.include_router(locations.router, prefix=f"{settings.API_V1_STR}/locations", tags=["Ubicaciones"])
 app.include_router(products.router, prefix=f"{settings.API_V1_STR}/products", tags=["Productos y Servicios"])
+app.include_router(interactions.router, prefix=f"{settings.API_V1_STR}/interactions", tags=["Interacciones y Stats"])
 
 
 @app.get("/", tags=["Health"])

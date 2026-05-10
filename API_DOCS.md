@@ -1,6 +1,6 @@
 # Mercado Plug — Documentación Técnica de Integración
 
-**Versión:** 0.5.0  
+**Versión:** 0.6.0  
 **Base URL (producción):** `https://mercado-plug-api.onrender.com`  
 **Base URL (local):** `http://localhost:8000`  
 **Prefijo de todos los endpoints:** `/api/v1`  
@@ -41,12 +41,17 @@
    - [Obtener producto por ID](#93-obtener-producto-por-id)
    - [Actualizar producto/servicio](#94-actualizar-productoservicio)
    - [Eliminar producto/servicio](#95-eliminar-productoservicio)
-10. [Modelos de Datos](#10-modelos-de-datos)
-11. [Enumeraciones](#11-enumeraciones)
-12. [Paginación](#12-paginación)
-13. [Ejemplos de Integración](#13-ejemplos-de-integración)
-14. [Variables de Entorno](#14-variables-de-entorno)
-15. [Despliegue en Render](#15-despliegue-en-render)
+10. [Módulo de Interacciones y Stats](#10-módulo-de-interacciones-y-stats)
+    - [Registrar interacción](#101-registrar-interacción)
+    - [Stats de tienda (vendedor)](#102-stats-de-tienda-vendedor)
+    - [Stats globales (admin)](#103-stats-globales-admin)
+    - [Intereses del usuario](#104-intereses-del-usuario)
+11. [Modelos de Datos](#11-modelos-de-datos)
+12. [Enumeraciones](#12-enumeraciones)
+13. [Paginación](#13-paginación)
+14. [Ejemplos de Integración](#14-ejemplos-de-integración)
+15. [Variables de Entorno](#15-variables-de-entorno)
+16. [Despliegue en Render](#16-despliegue-en-render)
 
 ---
 
@@ -1158,7 +1163,211 @@ _Sin cuerpo de respuesta._
 
 ---
 
-## 10. Modelos de Datos
+## 10. Módulo de Interacciones y Stats
+
+Registra cada vez que un usuario (o visitante anónimo) interactúa con un producto. Alimenta los stats de vendedores, el panel de admin y el motor de recomendaciones.
+
+---
+
+### 10.1 Registrar interacción
+
+```
+POST /api/v1/interactions/
+```
+
+El `store_id` se resuelve automáticamente desde el producto. No es necesario enviarlo.
+
+#### Body (JSON)
+
+| Campo        | Tipo     | Requerido | Descripción                                                                      |
+|--------------|----------|-----------|----------------------------------------------------------------------------------|
+| `product_id` | `int`    | Sí        | ID del producto con el que se interactuó                                         |
+| `user_id`    | `int`    | No        | ID del usuario. Si es `null` o se omite se registra como anónimo                 |
+| `action`     | `string` | No        | Acción registrada. Defecto: `click_buy_product`. Ver tabla de acciones abajo.    |
+
+#### Acciones disponibles (`action`)
+
+| Valor               | Descripción                                    |
+|---------------------|------------------------------------------------|
+| `click_buy_product` | El usuario hizo clic en el botón de comprar    |
+| `view_product`      | El usuario vio la página del producto          |
+| `view_store`        | El usuario visitó la tienda                    |
+| `share_product`     | El usuario compartió el producto               |
+
+#### Ejemplo de petición — usuario logueado
+
+```bash
+curl -X POST "https://mercado-plug-api.onrender.com/api/v1/interactions/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 1,
+    "user_id": 5,
+    "action": "click_buy_product"
+  }'
+```
+
+#### Ejemplo de petición — usuario anónimo
+
+```bash
+curl -X POST "https://mercado-plug-api.onrender.com/api/v1/interactions/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 1,
+    "action": "view_product"
+  }'
+```
+
+#### Respuesta exitosa `201 Created`
+
+```json
+{
+  "id": 42,
+  "product_id": 1,
+  "store_id": 1,
+  "user_id": 5,
+  "action": "click_buy_product",
+  "date": "2026-05-09T21:00:00Z"
+}
+```
+
+> Cuando `user_id` es `null`, el registro se almacena con `user_id: null` — representando una interacción anónima.
+
+#### Errores posibles
+
+| Código | Condición                 |
+|--------|---------------------------|
+| `404`  | El producto no existe     |
+
+---
+
+### 10.2 Stats de tienda (vendedor)
+
+Devuelve estadísticas de interacciones para una tienda específica.
+
+```
+GET /api/v1/interactions/stats/store/{store_id}
+```
+
+#### Path Parameters
+
+| Parámetro  | Tipo  | Descripción           |
+|------------|-------|-----------------------|
+| `store_id` | `int` | ID único de la tienda |
+
+#### Ejemplo de petición
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/interactions/stats/store/1"
+```
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "store_id": 1,
+  "total_interactions": 320,
+  "by_product": [
+    { "product_id": 3, "product_name": "Audífonos Bluetooth Pro", "count": 145 },
+    { "product_id": 7, "product_name": "Cargador USB-C", "count": 92 }
+  ],
+  "by_action": [
+    { "action": "click_buy_product", "count": 210 },
+    { "action": "view_product", "count": 110 }
+  ],
+  "by_date": [
+    { "date": "2026-05-07", "count": 45 },
+    { "date": "2026-05-08", "count": 78 },
+    { "date": "2026-05-09", "count": 60 }
+  ]
+}
+```
+
+#### Errores posibles
+
+| Código | Condición                  |
+|--------|----------------------------|
+| `404`  | La tienda no existe        |
+
+---
+
+### 10.3 Stats globales (admin)
+
+Devuelve estadísticas de toda la plataforma. Devuelve las top 20 tiendas con más interacciones y los últimos 30 días de actividad.
+
+```
+GET /api/v1/interactions/stats/admin
+```
+
+#### Ejemplo de petición
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/interactions/stats/admin"
+```
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "total_interactions": 15420,
+  "by_store": [
+    { "store_id": 1, "store_name": "Electrónica Rápida", "count": 3200 },
+    { "store_id": 4, "store_name": "Moda Urban", "count": 2800 }
+  ],
+  "by_action": [
+    { "action": "click_buy_product", "count": 9800 },
+    { "action": "view_product", "count": 4200 },
+    { "action": "view_store", "count": 1420 }
+  ],
+  "by_date": [
+    { "date": "2026-05-07", "count": 890 },
+    { "date": "2026-05-08", "count": 1050 },
+    { "date": "2026-05-09", "count": 720 }
+  ]
+}
+```
+
+---
+
+### 10.4 Intereses del usuario
+
+Devuelve las **top 10 categorías** más clickeadas por un usuario específico (solo acción `click_buy_product`). Se usará para alimentar el feed de recomendaciones personalizadas.
+
+```
+GET /api/v1/interactions/users/{user_id}/interests
+```
+
+#### Path Parameters
+
+| Parámetro | Tipo  | Descripción          |
+|-----------|-------|----------------------|
+| `user_id` | `int` | ID del usuario       |
+
+#### Ejemplo de petición
+
+```bash
+curl "https://mercado-plug-api.onrender.com/api/v1/interactions/users/5/interests"
+```
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "user_id": 5,
+  "top_categories": [
+    { "category": "Electrónica", "click_count": 38 },
+    { "category": "Ropa", "click_count": 22 },
+    { "category": "Calzado", "click_count": 17 },
+    { "category": "Hogar", "click_count": 9 },
+    { "category": "Juguetes", "click_count": 4 }
+  ]
+}
+```
+
+> Si el usuario no tiene interacciones registradas, `top_categories` devuelve una lista vacía `[]`.
+
+---
+
+## 11. Modelos de Datos
 
 ### Usuario (`User`)
 
@@ -1231,9 +1440,24 @@ _Sin cuerpo de respuesta._
 }
 ```
 
+### Interacción (`ProductInteraction`)
+
+```json
+{
+  "id": 42,
+  "product_id": 1,
+  "store_id": 1,
+  "user_id": 5,
+  "action": "click_buy_product",
+  "date": "2026-05-09T21:00:00Z"
+}
+```
+
+> `user_id` es `null` cuando la interacción es de un visitante anónimo.
+
 ---
 
-## 11. Enumeraciones
+## 12. Enumeraciones
 
 ### `role` — Rol del usuario
 
@@ -1283,7 +1507,7 @@ _Sin cuerpo de respuesta._
 
 ---
 
-## 12. Paginación
+## 13. Paginación
 
 El endpoint de listado soporta paginación por offset:
 
@@ -1306,7 +1530,7 @@ total_paginas = ceil(total / limit)
 
 ---
 
-## 13. Ejemplos de Integración
+## 14. Ejemplos de Integración
 
 ### JavaScript / Fetch
 
@@ -1414,7 +1638,7 @@ Future<Map<String, dynamic>> getUser(int id) async {
 
 ---
 
-## 14. Variables de Entorno
+## 15. Variables de Entorno
 
 El proyecto requiere las siguientes variables de entorno. Se deben definir en un archivo `.env` en la raíz del proyecto (no incluido en el repositorio):
 
@@ -1431,7 +1655,7 @@ cp .env.example .env
 
 ---
 
-## 15. Despliegue en Render
+## 16. Despliegue en Render
 
 El proyecto incluye `render.yaml` para despliegue automático.
 
@@ -1470,4 +1694,4 @@ backend/
 
 ---
 
-*Documentación generada para Mercado Plug API v0.5.0 — Mayo 2026*
+*Documentación generada para Mercado Plug API v0.6.0 — Mayo 2026*
