@@ -5,6 +5,8 @@ from app.core.security import hash_password
 from app.database import get_db
 from app.models.location import Location
 from app.models.user import User
+from app.routes.auth import get_current_user
+from app.schemas.location import LocationResponse, LocationUpdate
 from app.schemas.user import UserCreate, UserListResponse, UserResponse, UserUpdate
 
 router = APIRouter()
@@ -75,6 +77,49 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.get("/me/location", response_model=LocationResponse)
+def get_my_location(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.location_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No tienes una ubicación registrada",
+        )
+    location = db.query(Location).filter(Location.id == current_user.location_id).first()
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ubicación no encontrada",
+        )
+    return location
+
+
+@router.patch("/me/location", response_model=LocationResponse)
+def update_my_location(
+    payload: LocationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.location_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No tienes una ubicación registrada",
+        )
+    location = db.query(Location).filter(Location.id == current_user.location_id).first()
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ubicación no encontrada",
+        )
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(location, field, value)
+    db.commit()
+    db.refresh(location)
+    return location
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

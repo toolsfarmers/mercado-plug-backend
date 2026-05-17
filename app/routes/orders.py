@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.commission import Commission
+from app.models.location import Location
 from app.models.order import Order, OrderStatus
 from app.models.product import Product
 from app.models.sale import Sale
@@ -86,6 +87,14 @@ def create_order(
             detail="Producto no encontrado",
         )
 
+    # Si no se provee dirección, se usa la ubicación registrada del usuario
+    delivery_address = payload.delivery_address
+    if not delivery_address and current_user.location_id:
+        loc = db.query(Location).filter(Location.id == current_user.location_id).first()
+        if loc and loc.province:
+            parts = [p for p in [loc.address_line, loc.sector, loc.municipality, loc.province, loc.country] if p]
+            delivery_address = ", ".join(parts)
+
     order = Order(
         user_id=current_user.id,
         product_id=product.id,
@@ -93,7 +102,7 @@ def create_order(
         quantity=payload.quantity,
         unit_price=product.price,
         currency=product.currency,
-        delivery_address=payload.delivery_address,
+        delivery_address=delivery_address,
         notes=payload.notes,
     )
     db.add(order)
