@@ -13,6 +13,7 @@
 
 1. [Introducción](#1-introducción)
 2. [Autenticación](#2-autenticación)
+
    - [Login](#21-login)
    - [Obtener usuario autenticado](#22-obtener-usuario-autenticado-me)
    - [Cómo usar el token](#23-cómo-usar-el-token)
@@ -50,12 +51,23 @@
     - [Stats de tienda (vendedor)](#102-stats-de-tienda-vendedor)
     - [Stats globales (admin)](#103-stats-globales-admin)
     - [Intereses del usuario](#104-intereses-del-usuario)
-11. [Modelos de Datos](#11-modelos-de-datos)
-12. [Enumeraciones](#12-enumeraciones)
-13. [Paginación](#13-paginación)
-14. [Ejemplos de Integración](#14-ejemplos-de-integración)
-15. [Variables de Entorno](#15-variables-de-entorno)
-16. [Despliegue en Render](#16-despliegue-en-render)
+11. [Módulo de Pedidos](#11-módulo-de-pedidos)
+    - [Crear pedido](#111-crear-pedido)
+    - [Listar todos los pedidos](#112-listar-todos-los-pedidos)
+    - [Mis pedidos](#113-mis-pedidos)
+    - [Obtener pedido por ID](#114-obtener-pedido-por-id)
+    - [Actualizar estado del pedido](#115-actualizar-estado-del-pedido)
+    - [Eliminar pedido](#116-eliminar-pedido)
+12. [Módulo de Ventas](#12-módulo-de-ventas)
+    - [Listar todas las ventas](#121-listar-todas-las-ventas)
+    - [Ventas por tienda](#122-ventas-por-tienda)
+    - [Obtener venta por ID](#123-obtener-venta-por-id)
+13. [Modelos de Datos](#13-modelos-de-datos)
+14. [Enumeraciones](#14-enumeraciones)
+15. [Paginación](#15-paginación)
+16. [Ejemplos de Integración](#16-ejemplos-de-integración)
+17. [Variables de Entorno](#17-variables-de-entorno)
+18. [Despliegue en Render](#18-despliegue-en-render)
 
 ---
 
@@ -1593,7 +1605,245 @@ curl "https://mercado-plug-backend.onrender.com/api/v1/interactions/users/5/inte
 
 ---
 
-## 11. Modelos de Datos
+## 11. Módulo de Pedidos
+
+Un pedido vincula a un comprador con un producto de una tienda. El precio se captura como snapshot al momento de crear el pedido. Las ventas se generan automáticamente cuando el estado llega a `delivered`.
+
+**Flujo de estados:**
+`pending` → `confirmed` → `shipped` → `delivered` → *(crea venta automáticamente)*
+Cualquier estado puede ir a `cancelled` (operador/admin), o `pending` → `cancelled` (el propio comprador).
+
+**Control de acceso:**
+
+| Acción | buyer | operator | admin |
+|---|---|---|---|
+| Crear pedido | propio | — | sí |
+| Ver pedidos | solo los propios | todos | todos |
+| Cambiar estado | solo cancelar el propio si `pending` | todos | todos |
+| Eliminar pedido | — | — | sí |
+
+---
+
+### 11.1 Crear pedido
+
+**`POST /api/v1/orders/`** 🔒 *Requiere token (buyer o admin)*
+
+#### Request body
+
+```json
+{
+  "product_id": 1,
+  "quantity": 1,
+  "delivery_address": "Calle Duarte 45, Santiago",
+  "notes": "Entregar en horario de mañana"
+}
+```
+
+| Campo | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| `product_id` | `int` | ✅ | ID del producto a pedir |
+| `quantity` | `int` | No (def. 1) | Cantidad (mínimo 1) |
+| `delivery_address` | `string` | No | Dirección de entrega |
+| `notes` | `string` | No | Notas adicionales para el vendedor |
+
+> El `store_id` y `unit_price` se asignan automáticamente desde el producto.
+
+#### Respuesta `201 Created`
+
+```json
+{
+  "id": 1,
+  "user_id": 3,
+  "product_id": 1,
+  "store_id": 1,
+  "quantity": 1,
+  "unit_price": "3500.00",
+  "currency": "DOP",
+  "status": "pending",
+  "delivery_address": "Calle Duarte 45, Santiago",
+  "notes": "Entregar en horario de mañana",
+  "created_at": "2026-05-16T20:00:00Z",
+  "updated_at": "2026-05-16T20:00:00Z"
+}
+```
+
+#### Ejemplo curl
+
+```bash
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/orders/" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": 1, "quantity": 1, "delivery_address": "Calle Duarte 45, Santiago"}'
+```
+
+---
+
+### 11.2 Listar todos los pedidos
+
+**`GET /api/v1/orders/`** 🔒 *Requiere token (operator o admin)*
+
+#### Parámetros de query
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `skip` | `int` | Offset (def. 0) |
+| `limit` | `int` | Máx resultados (def. 20, máx 100) |
+| `status` | `string` | Filtrar por estado |
+| `store_id` | `int` | Filtrar por tienda |
+
+#### Ejemplo curl
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/orders/?status=pending" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+### 11.3 Mis pedidos
+
+**`GET /api/v1/orders/my`** 🔒 *Requiere token (cualquier rol)*
+
+Devuelve solo los pedidos del usuario autenticado. Soporta los mismos parámetros de paginación y filtro por `status`.
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/orders/my" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+### 11.4 Obtener pedido por ID
+
+**`GET /api/v1/orders/{order_id}`** 🔒 *Requiere token*
+
+- El propio comprador puede ver su pedido.
+- Operator y admin pueden ver cualquier pedido.
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/orders/1" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+### 11.5 Actualizar estado del pedido
+
+**`PATCH /api/v1/orders/{order_id}/status`** 🔒 *Requiere token*
+
+#### Request body
+
+```json
+{ "status": "confirmed" }
+```
+
+| Valor `status` | Descripción |
+|---|---|
+| `pending` | Pendiente (estado inicial) |
+| `confirmed` | Orden confirmada por el vendedor/operador |
+| `shipped` | Envío en camino |
+| `delivered` | Entrega realizada — **genera venta automáticamente** |
+| `cancelled` | Orden cancelada |
+
+**Reglas:**
+- Operator/admin pueden cambiar a cualquier estado válido.
+- Un comprador solo puede cambiar su pedido de `pending` → `cancelled`.
+- Un pedido `delivered` o `cancelled` no puede cambiar de estado.
+
+```bash
+curl -X PATCH "https://mercado-plug-backend.onrender.com/api/v1/orders/1/status" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "confirmed"}'
+```
+
+---
+
+### 11.6 Eliminar pedido
+
+**`DELETE /api/v1/orders/{order_id}`** 🔒 *Solo admin*
+
+Elimina el pedido permanentemente. Retorna `204 No Content`.
+
+---
+
+## 12. Módulo de Ventas
+
+Las ventas se crean **automáticamente** cuando un pedido llega al estado `delivered`. No existe un endpoint de creación manual.
+
+**Control de acceso:**
+
+| Endpoint | buyer | seller | operator | admin |
+|---|---|---|---|---|
+| `GET /sales/` | — | — | — | sí |
+| `GET /sales/store/{id}` | — | solo su tienda | todas | todas |
+| `GET /sales/{id}` | — | solo su tienda | todas | todas |
+
+---
+
+### 12.1 Listar todas las ventas
+
+**`GET /api/v1/sales/`** 🔒 *Solo admin*
+
+#### Parámetros
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `skip` | `int` | Offset (def. 0) |
+| `limit` | `int` | Máx resultados (def. 20, máx 100) |
+
+#### Respuesta `200 OK`
+
+```json
+{
+  "total": 5,
+  "sales": [
+    {
+      "id": 1,
+      "order_id": 1,
+      "store_id": 1,
+      "product_id": 1,
+      "seller_id": 2,
+      "amount": "3500.00",
+      "currency": "DOP",
+      "created_at": "2026-05-16T21:00:00Z"
+    }
+  ]
+}
+```
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/sales/" \
+  -H "Authorization: Bearer <token_admin>"
+```
+
+---
+
+### 12.2 Ventas por tienda
+
+**`GET /api/v1/sales/store/{store_id}`** 🔒 *Seller propietario, operator o admin*
+
+Devuelve todas las ventas de una tienda específica. El vendedor de la tienda puede ver sus propias ventas.
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/sales/store/1" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+### 12.3 Obtener venta por ID
+
+**`GET /api/v1/sales/{sale_id}`** 🔒 *Seller propietario, operator o admin*
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/sales/1" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## 13. Modelos de Datos
 
 ### Usuario (`User`)
 
@@ -1683,7 +1933,17 @@ curl "https://mercado-plug-backend.onrender.com/api/v1/interactions/users/5/inte
 
 ---
 
-## 12. Enumeraciones
+## 14. Enumeraciones
+
+### `status` (Pedido) — Estado del pedido
+
+| Valor | Descripción |
+|---|---|
+| `pending` | Pendiente. Estado inicial al crear el pedido. |
+| `confirmed` | Orden confirmada por el vendedor/operador. |
+| `shipped` | Envío en camino. |
+| `delivered` | Entrega realizada. Genera una venta automáticamente. |
+| `cancelled` | Orden cancelada. Estado terminal. |
 
 ### `role` — Rol del usuario
 
@@ -1734,7 +1994,7 @@ curl "https://mercado-plug-backend.onrender.com/api/v1/interactions/users/5/inte
 
 ---
 
-## 13. Paginación
+## 15. Paginación
 
 El endpoint de listado soporta paginación por offset:
 
@@ -1757,7 +2017,7 @@ total_paginas = ceil(total / limit)
 
 ---
 
-## 14. Ejemplos de Integración
+## 16. Ejemplos de Integración
 
 ### JavaScript / Fetch
 
@@ -1865,7 +2125,7 @@ Future<Map<String, dynamic>> getUser(int id) async {
 
 ---
 
-## 15. Variables de Entorno
+## 17. Variables de Entorno
 
 El proyecto requiere las siguientes variables de entorno. Se deben definir en un archivo `.env` en la raíz del proyecto (no incluido en el repositorio):
 
@@ -1882,7 +2142,7 @@ cp .env.example .env
 
 ---
 
-## 16. Despliegue en Render
+## 18. Despliegue en Render
 
 El proyecto incluye `render.yaml` para despliegue automático.
 
