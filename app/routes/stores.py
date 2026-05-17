@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models.location import Location
 from app.models.store import Store
 from app.models.user import User, UserRole
+from app.routes.auth import get_current_user
 from app.schemas.store import StoreCreate, StoreListResponse, StoreResponse, StoreUpdate
 
 router = APIRouter()
@@ -21,17 +22,22 @@ def _get_store_or_404(store_id: int, db: Session) -> Store:
 
 
 @router.post("/", response_model=StoreResponse, status_code=status.HTTP_201_CREATED)
-def create_store(payload: StoreCreate, db: Session = Depends(get_db)):
-    seller = db.query(User).filter(User.id == payload.seller_id).first()
-    if not seller:
+def create_store(
+    payload: StoreCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los administradores pueden registrar tiendas",
+        )
+
+    user = db.query(User).filter(User.id == payload.seller_id).first()
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="El seller_id proporcionado no corresponde a ningún usuario",
-        )
-    if seller.role not in (UserRole.seller, UserRole.admin):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario debe tener el rol 'seller' o 'admin' para crear una tienda",
+            detail="El usuario proporcionado no existe",
         )
 
     slug = payload.resolve_slug()
@@ -58,6 +64,11 @@ def create_store(payload: StoreCreate, db: Session = Depends(get_db)):
         location_id=location.id,
     )
     db.add(store)
+
+    # El usuario pasa automáticamente a rol 'seller' al recibir una tienda
+    if user.role == UserRole.buyer:
+        user.role = UserRole.seller
+
     db.commit()
     db.refresh(store)
     return store

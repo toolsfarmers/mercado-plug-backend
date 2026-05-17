@@ -534,21 +534,23 @@ Gestiona las tiendas del marketplace. Solo usuarios con rol `seller` o `admin` p
 
 ### 7.1 Crear tienda
 
-```
-POST /api/v1/stores/
-```
+**`POST /api/v1/stores/`** 🔒 *Solo admin*
+
+El admin registra una tienda y la asigna a cualquier usuario existente. Si el usuario tiene rol `buyer`, su rol sube automáticamente a `seller`.
 
 #### Reglas de negocio
 
-- El `seller_id` debe corresponder a un usuario existente con rol `seller` o `admin`.
-- El `slug` se genera automáticamente a partir del `store_name` si no se proporciona (normaliza tildes, espacios y caracteres especiales).
+- Solo usuarios con rol `admin` pueden crear tiendas.
+- El `seller_id` puede ser cualquier usuario registrado.
+- Si el usuario tiene rol `buyer`, pasa a `seller` automáticamente al recibir la tienda.
+- El `slug` se genera automáticamente a partir del `store_name` si no se proporciona.
 - El `slug` debe ser único en toda la plataforma.
 
 #### Body (JSON)
 
 | Campo             | Tipo     | Requerido | Descripción                                                                         |
 |-------------------|----------|-----------|-------------------------------------------------------------------------------------|
-| `seller_id`       | `int`    | Sí        | ID del usuario vendedor dueño de la tienda                                          |
+| `seller_id`       | `int`    | Sí        | ID del usuario que será dueño de la tienda                                          |
 | `store_name`      | `string` | Sí        | Nombre comercial de la tienda                                                       |
 | `slug`            | `string` | No        | URL amigable única (ej: `mi-tienda`). Se genera automáticamente si se omite. Solo minúsculas, números y guiones. |
 | `description`     | `string` | No        | Descripción de la tienda                                                            |
@@ -562,9 +564,10 @@ POST /api/v1/stores/
 
 ```bash
 curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/stores/" \
+  -H "Authorization: Bearer <token_admin>" \
   -H "Content-Type: application/json" \
   -d '{
-    "seller_id": 2,
+    "seller_id": 3,
     "store_name": "Electrónica Rápida",
     "description": "Los mejores gadgets al mejor precio",
     "whatsapp_number": "+502 5555-9999"
