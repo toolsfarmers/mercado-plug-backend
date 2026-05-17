@@ -33,6 +33,7 @@
    - [Actualizar tienda](#75-actualizar-tienda)
    - [Eliminar tienda](#76-eliminar-tienda)
 8. [Módulo de Ubicaciones](#8-módulo-de-ubicaciones)
+   - [Catálogo geográfico](#80-catálogo-geográfico-selects-dinámicos)
    - [Crear ubicación](#81-crear-ubicación)
    - [Listar ubicaciones](#82-listar-ubicaciones)
    - [Obtener ubicación por ID](#83-obtener-ubicación-por-id)
@@ -794,6 +795,56 @@ _Sin cuerpo de respuesta._
 
 Gestiona las ubicaciones geográficas. Una ubicación puede asociarse a una tienda mediante el campo `location_id`.
 
+### 8.0 Catálogo geográfico (selects dinámicos)
+
+Devuelve los países y sus provincias que tienen **al menos un producto activo y disponible**. Diseñado para que el frontend construya selects dinámicos de país/provincia sin hardcodear valores.
+
+```
+GET /api/v1/locations/catalog
+```
+
+No requiere parámetros.
+
+#### Respuesta exitosa `200 OK`
+
+```json
+{
+  "countries": [
+    {
+      "country": "República Dominicana",
+      "provinces": ["La Vega", "Santiago", "Santo Domingo"]
+    }
+  ]
+}
+```
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `countries` | `array` | Lista de países con sus provincias |
+| `countries[].country` | `string` | Nombre del país |
+| `countries[].provinces` | `array[string]` | Provincias con productos activos, ordenadas alfabéticamente |
+
+#### Ejemplo de petición
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/locations/catalog"
+```
+
+#### Uso sugerido en el frontend
+
+```javascript
+const res = await fetch("https://mercado-plug-backend.onrender.com/api/v1/locations/catalog");
+const { countries } = await res.json();
+
+// Poblar select de país
+countries.forEach(({ country, provinces }) => {
+  countrySelect.add(new Option(country, country));
+  // Al seleccionar un país, poblar el select de provincias con provinces[]
+});
+```
+
+---
+
 ### 8.1 Crear ubicación
 
 ```
@@ -1129,6 +1180,7 @@ GET /api/v1/products/
 | `delivery`     | `boolean` | —         | `true` o `false`                                                |
 | `min_price`    | `number`  | —         | Precio mínimo                                                   |
 | `max_price`    | `number`  | —         | Precio máximo                                                   |
+| `country`      | `string`  | —         | Filtrar por país (búsqueda parcial)                             |
 | `province`     | `string`  | —         | Filtrar por provincia (búsqueda parcial)                        |
 | `municipality` | `string`  | —         | Filtrar por municipio (búsqueda parcial)                        |
 | `sort_by`      | `string`  | `newest`  | `newest` · `price_asc` · `price_desc` · `most_interacted`      |

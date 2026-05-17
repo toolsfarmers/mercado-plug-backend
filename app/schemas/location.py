@@ -55,3 +55,12 @@ class LocationResponse(BaseModel):
 class LocationListResponse(BaseModel):
     total: int
     locations: list[LocationResponse]
+
+
+class CountryEntry(BaseModel):
+    country: str
+    provinces: list[str]
+
+
+class LocationCatalogResponse(BaseModel):
+    countries: list[CountryEntry]

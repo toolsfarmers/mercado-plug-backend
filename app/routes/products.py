@@ -33,7 +33,7 @@ def _get_product_or_404(product_id: int, db: Session) -> Product:
 
 def _apply_filters_and_sort(query, *, search, store_id, category, type,
                              stock_status, delivery, min_price, max_price,
-                             province, municipality, sort_by, db):
+                             country, province, municipality, sort_by, db):
     """Aplica todos los filtros y ordenamiento a la query."""
 
     if search:
@@ -57,13 +57,15 @@ def _apply_filters_and_sort(query, *, search, store_id, category, type,
         query = query.filter(Product.price >= min_price)
     if max_price is not None:
         query = query.filter(Product.price <= max_price)
+    # Determina si se necesita JOIN con Location
+    needs_location_join = country or province or municipality
+    if needs_location_join:
+        query = query.join(Location, Location.id == Product.location_id)
+    if country:
+        query = query.filter(Location.country.ilike(f"%{country}%"))
     if province:
-        query = query.join(Location, Location.id == Product.location_id).filter(
-            Location.province.ilike(f"%{province}%")
-        )
+        query = query.filter(Location.province.ilike(f"%{province}%"))
     if municipality:
-        if not province:
-            query = query.join(Location, Location.id == Product.location_id)
         query = query.filter(Location.municipality.ilike(f"%{municipality}%"))
 
     # Ordenamiento
@@ -143,6 +145,7 @@ def list_products(
     delivery: bool | None = Query(None, description="Filtrar por entrega a domicilio"),
     min_price: Decimal | None = Query(None, ge=0, description="Precio mínimo"),
     max_price: Decimal | None = Query(None, ge=0, description="Precio máximo"),
+    country: str | None = Query(None, description="Filtrar por país"),
     province: str | None = Query(None, description="Filtrar por provincia"),
     municipality: str | None = Query(None, description="Filtrar por municipio"),
     sort_by: SortBy = Query(SortBy.newest, description="newest | price_asc | price_desc | most_interacted"),
@@ -152,8 +155,8 @@ def list_products(
     query = _apply_filters_and_sort(
         query, search=search, store_id=store_id, category=category, type=type,
         stock_status=stock_status, delivery=delivery, min_price=min_price,
-        max_price=max_price, province=province, municipality=municipality,
-        sort_by=sort_by, db=db,
+        max_price=max_price, country=country, province=province,
+        municipality=municipality, sort_by=sort_by, db=db,
     )
     total = query.count()
     products = query.offset(skip).limit(limit).all()

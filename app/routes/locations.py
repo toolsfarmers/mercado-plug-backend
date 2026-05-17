@@ -1,9 +1,14 @@
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.location import Location
+from app.models.product import Product, ProductStatus, StockStatus
 from app.schemas.location import (
+    CountryEntry,
+    LocationCatalogResponse,
     LocationCreate,
     LocationListResponse,
     LocationResponse,
@@ -48,6 +53,38 @@ def list_locations(
     total = query.count()
     locations = query.offset(skip).limit(limit).all()
     return {"total": total, "locations": locations}
+
+
+@router.get("/catalog", response_model=LocationCatalogResponse)
+def location_catalog(db: Session = Depends(get_db)):
+    """
+    Devuelve los países y sus provincias que tienen al menos un producto
+    activo y disponible. Ideal para selects dinámicos en el frontend.
+    """
+    rows = (
+        db.query(Location.country, Location.province)
+        .join(Product, Product.location_id == Location.id)
+        .filter(
+            Product.status == ProductStatus.active,
+            Product.stock_status == StockStatus.available,
+            Location.country.isnot(None),
+            Location.province.isnot(None),
+            Location.province != "",
+        )
+        .distinct()
+        .order_by(Location.country, Location.province)
+        .all()
+    )
+
+    grouped: dict[str, set[str]] = defaultdict(set)
+    for country, province in rows:
+        grouped[country].add(province)
+
+    countries = [
+        CountryEntry(country=c, provinces=sorted(grouped[c]))
+        for c in sorted(grouped)
+    ]
+    return LocationCatalogResponse(countries=countries)
 
 
 @router.get("/{location_id}", response_model=LocationResponse)
