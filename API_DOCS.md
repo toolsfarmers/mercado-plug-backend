@@ -285,7 +285,7 @@ POST /api/v1/users/
 | `email`    | `string` | Sí        | Correo electrónico único (formato válido)                          |
 | `password` | `string` | Sí        | Contraseña en texto plano (mínimo 8 caracteres). Se almacena hasheada con bcrypt. |
 | `phone`    | `string` | No        | Número de teléfono                                                 |
-| `role`     | `string` | No        | `buyer` (defecto), `seller` o `admin`                              |
+| `role`     | `string` | No        | `buyer` (defecto), `seller`, `operator` o `admin`                  |
 
 #### Ejemplo de petición
 
@@ -440,7 +440,7 @@ PATCH /api/v1/users/{user_id}
 |----------|----------|--------------------------------------------------------|
 | `name`   | `string` | Nuevo nombre completo                                  |
 | `phone`  | `string` | Nuevo número de teléfono                               |
-| `role`   | `string` | Nuevo rol: `buyer`, `seller` o `admin`                 |
+| `role`   | `string` | Nuevo rol: `buyer`, `seller`, `operator` o `admin`     |
 | `status` | `string` | Nuevo estado: `active`, `inactive` o `banned`          |
 
 #### Ejemplo de petición
@@ -1603,7 +1603,7 @@ curl "https://mercado-plug-backend.onrender.com/api/v1/interactions/users/5/inte
   "name": "string",
   "email": "user@example.com",
   "phone": "string | null",
-  "role": "buyer | seller | admin",
+  "role": "buyer | seller | operator | admin",
   "status": "active | inactive | banned",
   "location_id": 3,
   "created_at": "2026-05-08T18:00:00Z"
@@ -1687,11 +1687,12 @@ curl "https://mercado-plug-backend.onrender.com/api/v1/interactions/users/5/inte
 
 ### `role` — Rol del usuario
 
-| Valor    | Descripción                                              |
-|----------|----------------------------------------------------------|
-| `buyer`  | Comprador. Puede navegar y comprar productos. (defecto)  |
-| `seller` | Vendedor. Puede publicar y gestionar productos.          |
-| `admin`  | Administrador. Acceso total a la plataforma.             |
+| Valor      | Descripción                                                                          |
+|------------|--------------------------------------------------------------------------------------|
+| `buyer`    | Comprador. Puede navegar y comprar productos. (defecto)                              |
+| `seller`   | Vendedor. Puede publicar y gestionar productos.                                      |
+| `operator` | Operador. Acceso a gestión interna (pedidos, revisión, completación). Sin acceso total de admin. |
+| `admin`    | Administrador. Acceso total a la plataforma.                                         |
 
 ### `status` (Usuario) — Estado del usuario
 

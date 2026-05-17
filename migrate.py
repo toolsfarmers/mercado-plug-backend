@@ -11,6 +11,19 @@ from sqlalchemy import text
 migrations = [
     # Habilita extensión unaccent para búsqueda sin tildes
     "CREATE EXTENSION IF NOT EXISTS unaccent;",
+    # Agrega el valor 'operator' al enum userrole (si no existe)
+    """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_enum
+            JOIN pg_type ON pg_enum.enumtypid = pg_type.oid
+            WHERE pg_type.typname = 'userrole' AND pg_enum.enumlabel = 'operator'
+        ) THEN
+            ALTER TYPE userrole ADD VALUE 'operator' BEFORE 'admin';
+        END IF;
+    END$$;
+    """,
     # Agrega location_id a users (si no existe)
     """
     DO $$
