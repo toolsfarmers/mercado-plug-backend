@@ -1,8 +1,9 @@
 import re
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.store import StoreStatus
 
@@ -61,6 +62,7 @@ class StoreUpdate(BaseModel):
     logo_url: Optional[str] = None
     cover_image_url: Optional[str] = None
     whatsapp_number: Optional[str] = None
+    commission_rate: Optional[Decimal] = Field(None, ge=Decimal("0"), le=Decimal("1"))
     status: Optional[StoreStatus] = None
 
     @field_validator("slug")
@@ -86,6 +88,7 @@ class StoreResponse(BaseModel):
     cover_image_url: Optional[str] = None
     whatsapp_number: Optional[str] = None
     location_id: Optional[int] = None
+    commission_rate: Decimal
     status: StoreStatus
     created_at: datetime
 

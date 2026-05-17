@@ -62,12 +62,18 @@
     - [Listar todas las ventas](#121-listar-todas-las-ventas)
     - [Ventas por tienda](#122-ventas-por-tienda)
     - [Obtener venta por ID](#123-obtener-venta-por-id)
-13. [Modelos de Datos](#13-modelos-de-datos)
-14. [Enumeraciones](#14-enumeraciones)
-15. [Paginación](#15-paginación)
-16. [Ejemplos de Integración](#16-ejemplos-de-integración)
-17. [Variables de Entorno](#17-variables-de-entorno)
-18. [Despliegue en Render](#18-despliegue-en-render)
+13. [Módulo de Comisiones](#13-módulo-de-comisiones)
+    - [Resumen global](#131-resumen-global)
+    - [Balance de una tienda](#132-balance-de-una-tienda)
+    - [Historial de comisiones](#133-historial-de-comisiones)
+    - [Historial de pagos](#134-historial-de-pagos)
+    - [Liquidar deuda](#135-liquidar-deuda)
+14. [Modelos de Datos](#14-modelos-de-datos)
+15. [Enumeraciones](#15-enumeraciones)
+16. [Paginación](#16-paginación)
+17. [Ejemplos de Integración](#17-ejemplos-de-integración)
+18. [Variables de Entorno](#18-variables-de-entorno)
+19. [Despliegue en Render](#19-despliegue-en-render)
 
 ---
 
@@ -1843,7 +1849,181 @@ curl "https://mercado-plug-backend.onrender.com/api/v1/sales/1" \
 
 ---
 
-## 13. Modelos de Datos
+## 13. Módulo de Comisiones
+
+Por cada venta completada se genera automáticamente una entrada de comisión calculada con la tasa configurada en la tienda (`commission_rate`, por defecto **4%**). Las comisiones se acumulan en estado `pending` hasta que un operador o admin liquida la deuda, momento en que se registra un pago en el historial y todas las entradas pasan a `paid`.
+
+**Control de acceso:**
+
+| Endpoint | seller propio | operator | admin |
+|---|---|---|---|
+| Balance de su tienda | sí | sí | sí |
+| Historial de comisiones | — | sí | sí |
+| Historial de pagos | sí | sí | sí |
+| Liquidar deuda | — | sí | sí |
+| Resumen global | — | — | sí |
+
+> La tasa de comisión se puede actualizar por tienda vía `PATCH /api/v1/stores/{id}` con el campo `commission_rate` (valor entre 0 y 1, ej. `0.04` = 4%).
+
+---
+
+### 13.1 Resumen global
+
+**`GET /api/v1/commissions/summary`** 🔒 *Solo admin*
+
+Devuelve todas las tiendas que tienen deuda pendiente, ordenadas de mayor a menor monto.
+
+#### Respuesta `200 OK`
+
+```json
+{
+  "total_stores_with_debt": 2,
+  "total_pending_amount": "840.00",
+  "stores": [
+    {
+      "store_id": 1,
+      "store_name": "Electrónica Rápida",
+      "commission_rate": "0.0400",
+      "pending_count": 3,
+      "pending_amount": "560.00"
+    },
+    {
+      "store_id": 2,
+      "store_name": "Moda Urban",
+      "commission_rate": "0.0400",
+      "pending_count": 2,
+      "pending_amount": "280.00"
+    }
+  ]
+}
+```
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/commissions/summary" \
+  -H "Authorization: Bearer <token_admin>"
+```
+
+---
+
+### 13.2 Balance de una tienda
+
+**`GET /api/v1/commissions/store/{store_id}/balance`** 🔒 *Seller propio, operator, admin*
+
+Muestra la deuda pendiente actual de la tienda.
+
+#### Respuesta `200 OK`
+
+```json
+{
+  "store_id": 1,
+  "store_name": "Electrónica Rápida",
+  "commission_rate": "0.0400",
+  "pending_count": 3,
+  "pending_amount": "560.00",
+  "currency": "DOP"
+}
+```
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/commissions/store/1/balance" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+### 13.3 Historial de comisiones
+
+**`GET /api/v1/commissions/store/{store_id}/history`** 🔒 *Operator, admin*
+
+Lista todas las entradas de comisión de una tienda. Soporta filtro por estado.
+
+#### Parámetros
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `status` | `string` | `pending` o `paid` |
+| `skip` | `int` | Offset (def. 0) |
+| `limit` | `int` | Máx resultados (def. 20, máx 100) |
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/commissions/store/1/history?status=pending" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+### 13.4 Historial de pagos
+
+**`GET /api/v1/commissions/store/{store_id}/payments`** 🔒 *Seller propio, operator, admin*
+
+Lista todos los pagos realizados por la tienda.
+
+#### Respuesta `200 OK`
+
+```json
+{
+  "total": 1,
+  "payments": [
+    {
+      "id": 1,
+      "store_id": 1,
+      "amount_paid": "560.00",
+      "commissions_count": 3,
+      "notes": "Transferencia Banco Popular 16/05/2026",
+      "settled_by": 1,
+      "created_at": "2026-05-16T22:00:00Z"
+    }
+  ]
+}
+```
+
+```bash
+curl "https://mercado-plug-backend.onrender.com/api/v1/commissions/store/1/payments" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+### 13.5 Liquidar deuda
+
+**`POST /api/v1/commissions/store/{store_id}/settle`** 🔒 *Operator, admin*
+
+Marca todas las comisiones `pending` de la tienda como `paid` y crea un registro de pago. Si no hay deuda pendiente devuelve error `400`.
+
+#### Request body
+
+```json
+{ "notes": "Transferencia Banco Popular 16/05/2026" }
+```
+
+| Campo | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| `notes` | `string` | No | Descripción del pago (referencia bancaria, método, etc.) |
+
+#### Respuesta `201 Created`
+
+```json
+{
+  "id": 1,
+  "store_id": 1,
+  "amount_paid": "560.00",
+  "commissions_count": 3,
+  "notes": "Transferencia Banco Popular 16/05/2026",
+  "settled_by": 1,
+  "created_at": "2026-05-16T22:00:00Z"
+}
+```
+
+```bash
+curl -X POST "https://mercado-plug-backend.onrender.com/api/v1/commissions/store/1/settle" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"notes": "Transferencia Banco Popular 16/05/2026"}'
+```
+
+---
+
+## 14. Modelos de Datos
 
 ### Usuario (`User`)
 
@@ -1933,7 +2113,14 @@ curl "https://mercado-plug-backend.onrender.com/api/v1/sales/1" \
 
 ---
 
-## 14. Enumeraciones
+## 15. Enumeraciones
+
+### `status` (Comisión) — Estado de la comisión
+
+| Valor | Descripción |
+|---|---|
+| `pending` | Comisión generada, aún no pagada. Se acumula en la deuda de la tienda. |
+| `paid` | Comisión liquidada. Generada al ejecutar el endpoint `/settle`. |
 
 ### `status` (Pedido) — Estado del pedido
 
@@ -1994,7 +2181,7 @@ curl "https://mercado-plug-backend.onrender.com/api/v1/sales/1" \
 
 ---
 
-## 15. Paginación
+## 16. Paginación
 
 El endpoint de listado soporta paginación por offset:
 
@@ -2017,7 +2204,7 @@ total_paginas = ceil(total / limit)
 
 ---
 
-## 16. Ejemplos de Integración
+## 17. Ejemplos de Integración
 
 ### JavaScript / Fetch
 
@@ -2125,7 +2312,7 @@ Future<Map<String, dynamic>> getUser(int id) async {
 
 ---
 
-## 17. Variables de Entorno
+## 18. Variables de Entorno
 
 El proyecto requiere las siguientes variables de entorno. Se deben definir en un archivo `.env` en la raíz del proyecto (no incluido en el repositorio):
 
@@ -2142,7 +2329,7 @@ cp .env.example .env
 
 ---
 
-## 18. Despliegue en Render
+## 19. Despliegue en Render
 
 El proyecto incluye `render.yaml` para despliegue automático.
 

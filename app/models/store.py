@@ -1,6 +1,7 @@
 import enum
+from decimal import Decimal
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -25,6 +26,7 @@ class Store(Base):
     cover_image_url = Column(String(500), nullable=True)
     whatsapp_number = Column(String(30), nullable=True)
     location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True)
+    commission_rate = Column(Numeric(5, 4), nullable=False, default=Decimal("0.04"))
     status = Column(Enum(StoreStatus), nullable=False, default=StoreStatus.active)
     created_at = Column(
         DateTime(timezone=True),

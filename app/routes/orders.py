@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.commission import Commission
 from app.models.order import Order, OrderStatus
 from app.models.product import Product
 from app.models.sale import Sale
@@ -34,23 +35,34 @@ def _get_order_or_404(order_id: int, db: Session) -> Order:
 
 
 def _create_sale_for_order(order: Order, db: Session) -> None:
-    """Crea automáticamente una venta cuando un pedido llega a 'delivered'."""
+    """Crea automáticamente una venta y su comisión cuando un pedido llega a 'delivered'."""
     existing = db.query(Sale).filter(Sale.order_id == order.id).first()
     if existing:
         return
 
     store = db.query(Store).filter(Store.id == order.store_id).first()
     seller_id = store.seller_id if store else None
+    sale_amount = order.unit_price * order.quantity
 
     sale = Sale(
         order_id=order.id,
         store_id=order.store_id,
         product_id=order.product_id,
         seller_id=seller_id,
-        amount=order.unit_price * order.quantity,
+        amount=sale_amount,
         currency=order.currency,
     )
     db.add(sale)
+    db.flush()  # necesario para obtener sale.id antes del commit
+
+    if store and store.commission_rate:
+        commission = Commission(
+            sale_id=sale.id,
+            store_id=store.id,
+            amount=sale_amount * store.commission_rate,
+            rate=store.commission_rate,
+        )
+        db.add(commission)
 
 
 # ── Crear pedido ───────────────────────────────────────────────────────────────

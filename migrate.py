@@ -49,6 +49,18 @@ migrations = [
         END IF;
     END$$;
     """,
+    # Agrega commission_rate a stores (si no existe)
+    """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='stores' AND column_name='commission_rate'
+        ) THEN
+            ALTER TABLE stores ADD COLUMN commission_rate NUMERIC(5,4) NOT NULL DEFAULT 0.04;
+        END IF;
+    END$$;
+    """,
 ]
 
 with engine.connect() as conn:

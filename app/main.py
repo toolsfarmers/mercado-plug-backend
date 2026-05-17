@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.database import Base, engine
-from app.routes import auth, interactions, locations, orders, products, sales, stores, users
+from app.routes import auth, commissions, interactions, locations, orders, products, sales, stores, users
 
 Base.metadata.create_all(bind=engine)
 
@@ -31,6 +31,7 @@ app.include_router(products.router, prefix=f"{settings.API_V1_STR}/products", ta
 app.include_router(interactions.router, prefix=f"{settings.API_V1_STR}/interactions", tags=["Interacciones y Stats"])
 app.include_router(orders.router, prefix=f"{settings.API_V1_STR}/orders", tags=["Pedidos"])
 app.include_router(sales.router, prefix=f"{settings.API_V1_STR}/sales", tags=["Ventas"])
+app.include_router(commissions.router, prefix=f"{settings.API_V1_STR}/commissions", tags=["Comisiones"])
 
 
 @app.get("/", tags=["Health"])
